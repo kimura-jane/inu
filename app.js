@@ -156,3 +156,44 @@
   }
 
   const infoPanel = document.getElementById('info-panel');
+  const infoClose = document.getElementById('info-close');
+  const infoImage = document.getElementById('info-image');
+  const infoTitle = document.getElementById('info-title');
+  const infoDesc = document.getElementById('info-desc');
+
+  function showInfo(work) {
+    infoImage.src = work.image;
+    infoTitle.textContent = work.title || ('TAF DOG #' + work.id);
+    infoDesc.textContent = work.description || '';
+    infoPanel.classList.remove('hidden');
+  }
+
+  infoClose.addEventListener('click', function () {
+    infoPanel.classList.add('hidden');
+  });
+
+  infoPanel.addEventListener('click', function (e) {
+    if (e.target === infoPanel) {
+      infoPanel.classList.add('hidden');
+    }
+  });
+
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  window.addEventListener('resize', function () {
+    resizeRenderer();
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+  });
+
+  function resizeRenderer() {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    renderer.setSize(width, height, false);
+  }
+})();
