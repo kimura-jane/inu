@@ -1,0 +1,141 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #020208;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  color: #f5f5f5;
+}
+
+#scene {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#ui-top {
+  position: fixed;
+  top: env(safe-area-inset-top, 8px);
+  left: 0;
+  width: 100%;
+  padding: 8px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+#museum-title {
+  font-size: 16px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+#museum-sub {
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+#nav-buttons {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 8px) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 16px;
+  z-index: 10;
+}
+
+#nav-buttons button {
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.3);
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  font-size: 20px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+#nav-buttons button:active {
+  background: rgba(255,255,255,0.1);
+}
+
+#info-panel {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+}
+
+#info-panel.hidden {
+  display: none;
+}
+
+#info-inner {
+  width: min(92vw, 420px);
+  max-height: 80vh;
+  background: #050509;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.15);
+  padding: 12px 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#info-close {
+  align-self: flex-end;
+  border: none;
+  background: transparent;
+  color: #fff;
+  font-size: 18px;
+}
+
+#info-image {
+  width: 100%;
+  border-radius: 12px;
+  display: block;
+}
+
+#info-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#info-title {
+  font-size: 16px;
+}
+
+#info-desc {
+  font-size: 12px;
+  line-height: 1.4;
+  opacity: 0.75;
+}
+
+#info-link {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #ffd36b;
+  text-decoration: none;
+}
+
+#info-link::after {
+  content: " ↗";
+  font-size: 11px;
+}
