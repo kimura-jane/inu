@@ -9,16 +9,19 @@
 <body>
   <div id="ui-top">
     <div id="museum-title">TAF DOG MUSEUM</div>
-    <div id="museum-sub">ドラッグで見回す / ← → で歩く / タップで拡大</div>
+    <div id="museum-sub">ドラッグで見回す / ジョイスティックで歩く / タップで拡大</div>
   </div>
 
   <canvas id="scene"></canvas>
 
-  <div id="nav-buttons">
-    <button id="btn-back">←</button>
-    <button id="btn-forward">→</button>
+  <!-- ジョイスティック -->
+  <div id="joy-container">
+    <div id="joy-bg">
+      <div id="joy-stick"></div>
+    </div>
   </div>
 
+  <!-- 作品情報パネル -->
   <div id="info-panel" class="hidden">
     <div id="info-inner">
       <button id="info-close">×</button>
@@ -30,7 +33,7 @@
     </div>
   </div>
 
-  <!-- three.js 本体だけ -->
+  <!-- three.js 本体だけ（グローバル THREE） -->
   <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
 
   <!-- データ & アプリ本体（この順） -->
