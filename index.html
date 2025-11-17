@@ -9,7 +9,7 @@
 <body>
   <div id="ui-top">
     <div id="museum-title">TAF DOG MUSEUM</div>
-    <div id="museum-sub">tap to look / ← → で歩く / タップで拡大</div>
+    <div id="museum-sub">ドラッグで見回す / ← → で歩く / タップで拡大</div>
   </div>
 
   <canvas id="scene"></canvas>
@@ -30,6 +30,12 @@
     </div>
   </div>
 
-  <script type="module" src="app.js"></script>
+  <!-- three.js 本体 & OrbitControls（グローバル） -->
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+
+  <!-- データ & アプリ本体 -->
+  <script src="data.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
