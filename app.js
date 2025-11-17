@@ -20,8 +20,8 @@
     0.1,
     500
   );
-  camera.position.set(0, 1.6, 6);
-  camera.lookAt(0, 1.6, -10);
+  camera.position.set(0, 1.6, 6);      // 手前スタート
+  camera.lookAt(0, 1.6, -10);          // 奥（マイナスZ）を見る
 
   // ---------- lights ----------
   const ambient = new THREE.AmbientLight(0xffffff, 0.6);
@@ -31,7 +31,7 @@
   dir.position.set(4, 6, 3);
   scene.add(dir);
 
-  // 天井ライト
+  // 天井ライト（美術館っぽく）
   const lightMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   for (let i = 0; i < 12; i++) {
     const geo = new THREE.PlaneGeometry(1.8, 0.5);
@@ -75,6 +75,7 @@
   wallRight.rotation.y = -Math.PI / 2;
   scene.add(wallRight);
 
+  // 巾木
   const baseMat = new THREE.MeshStandardMaterial({ color: 0x999999, roughness: 0.6 });
   const baseGeo = new THREE.BoxGeometry(0.1, 0.3, 200);
   const baseLeft = new THREE.Mesh(baseGeo, baseMat);
@@ -93,10 +94,11 @@
   const spacingZ = 3.0;
 
   (WORKS || []).forEach(function (work, index) {
-    const side = index % 2 === 0 ? -1 : 1;
+    const side = index % 2 === 0 ? -1 : 1;            // 左右に交互
     const idxOnSide = Math.floor(index / 2);
-    const z = -idxOnSide * spacingZ - 4;
+    const z = -idxOnSide * spacingZ - 4;             // 奥へ並べる
 
+    // 額縁
     const frameGeo = new THREE.PlaneGeometry(frameWidth, frameHeight);
     const frameMat = new THREE.MeshStandardMaterial({
       color: 0x333333,
@@ -107,6 +109,7 @@
     frameMesh.position.set(side * 2.3, 1.6, z);
     scene.add(frameMesh);
 
+    // 絵
     const planeGeo = new THREE.PlaneGeometry(1.2, 1.2);
     const tex = textureLoader.load(work.image);
     const planeMat = new THREE.MeshStandardMaterial({
@@ -142,13 +145,13 @@
     scene.rotation.y += dx * 0.004;
   });
 
-  // ---------- ジョイスティックで前後＋左右移動 ----------
+  // ---------- ジョイスティック ----------
   const joyBg = document.getElementById('joy-bg');
   const joyStick = document.getElementById('joy-stick');
   const joyRect = { x: 0, y: 0, r: 0 };
   let joyActive = false;
-  let joyDX = 0; // 左右
-  let joyDY = 0; // 前後
+  let joyDX = 0; // 左右（右＋）
+  let joyDY = 0; // 前後（上− 下＋）
 
   function updateJoyRect() {
     const rect = joyBg.getBoundingClientRect();
@@ -186,8 +189,8 @@
     const ndx = dx * ratio;
     const ndy = dy * ratio;
 
-    joyDX = ndx / max; // -1〜1（右が＋）
-    joyDY = ndy / max; // -1〜1（下が＋）
+    joyDX = ndx / max; // -1〜1
+    joyDY = ndy / max; // -1〜1
 
     joyStick.style.transform =
       `translate(calc(-50% + ${ndx}px), calc(-50% + ${ndy}px))`;
@@ -237,24 +240,22 @@
     }
   });
 
-  // ---------- ループ ----------
+  // ---------- アニメーション ----------
   function animate() {
     requestAnimationFrame(animate);
 
-    const deadZone = 0.08;
+    const deadZone = 0.12;          // 入力の遊びを少し広めに
     let moveX = 0;
     let moveZ = 0;
 
     if (Math.abs(joyDX) > deadZone || Math.abs(joyDY) > deadZone) {
-      const speedBase = 0.12;
+      const speedBase = 0.07;       // 速すぎたので少し落とす
       const mag = Math.min(1, Math.hypot(joyDX, joyDY));
       const speed = speedBase * mag;
 
-      const forward = -joyDY; // 上に倒すと前に進む
-      const strafe = joyDX;   // 右に倒すと右へ
-
-      moveZ = forward * speed;
-      moveX = strafe * speed * 0.7;
+      // dy：上に倒すとマイナス → 奥（マイナスZ）に進めたいのでそのまま使う
+      moveZ = joyDY * speed;       // 上＝前進（zが小さくなる）、下＝後退
+      moveX = joyDX * speed * 0.7; // 横移動は少しゆっくり
     }
 
     if (moveZ !== 0 || moveX !== 0) {
