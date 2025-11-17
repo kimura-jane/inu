@@ -1,4 +1,4 @@
-// app.js - ジョイスティック移動 & 美術館っぽい廊下
+// app.js - ジョイスティックで前後＋左右移動 & 美術館廊下
 (function () {
   const canvas = document.getElementById('scene');
 
@@ -12,7 +12,7 @@
 
   // ---------- scene & camera ----------
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x080810); // 少し青みのある暗さ
+  scene.background = new THREE.Color(0x080810);
 
   const camera = new THREE.PerspectiveCamera(
     60,
@@ -31,7 +31,7 @@
   dir.position.set(4, 6, 3);
   scene.add(dir);
 
-  // 天井ライトパネル（美術館っぽさ）
+  // 天井ライト
   const lightMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   for (let i = 0; i < 12; i++) {
     const geo = new THREE.PlaneGeometry(1.8, 0.5);
@@ -75,7 +75,6 @@
   wallRight.rotation.y = -Math.PI / 2;
   scene.add(wallRight);
 
-  // 床の縁（巾木っぽい）
   const baseMat = new THREE.MeshStandardMaterial({ color: 0x999999, roughness: 0.6 });
   const baseGeo = new THREE.BoxGeometry(0.1, 0.3, 200);
   const baseLeft = new THREE.Mesh(baseGeo, baseMat);
@@ -94,11 +93,10 @@
   const spacingZ = 3.0;
 
   (WORKS || []).forEach(function (work, index) {
-    const side = index % 2 === 0 ? -1 : 1;   // 左右
+    const side = index % 2 === 0 ? -1 : 1;
     const idxOnSide = Math.floor(index / 2);
     const z = -idxOnSide * spacingZ - 4;
 
-    // フレーム（額縁）
     const frameGeo = new THREE.PlaneGeometry(frameWidth, frameHeight);
     const frameMat = new THREE.MeshStandardMaterial({
       color: 0x333333,
@@ -109,7 +107,6 @@
     frameMesh.position.set(side * 2.3, 1.6, z);
     scene.add(frameMesh);
 
-    // 絵
     const planeGeo = new THREE.PlaneGeometry(1.2, 1.2);
     const tex = textureLoader.load(work.image);
     const planeMat = new THREE.MeshStandardMaterial({
@@ -126,7 +123,7 @@
     clickableMeshes.push(artMesh);
   });
 
-  // ---------- ドラッグで見回す：シーンをY軸回転 ----------
+  // ---------- ドラッグで視線回転 ----------
   let dragging = false;
   let lastX = 0;
 
@@ -135,13 +132,8 @@
     lastX = e.clientX;
   });
 
-  window.addEventListener('pointerup', function () {
-    dragging = false;
-  });
-
-  window.addEventListener('pointerleave', function () {
-    dragging = false;
-  });
+  window.addEventListener('pointerup', () => { dragging = false; });
+  window.addEventListener('pointerleave', () => { dragging = false; });
 
   canvas.addEventListener('pointermove', function (e) {
     if (!dragging) return;
@@ -150,13 +142,13 @@
     scene.rotation.y += dx * 0.004;
   });
 
-  // ---------- ジョイスティックで前後移動 ----------
+  // ---------- ジョイスティックで前後＋左右移動 ----------
   const joyBg = document.getElementById('joy-bg');
   const joyStick = document.getElementById('joy-stick');
   const joyRect = { x: 0, y: 0, r: 0 };
   let joyActive = false;
-  let joyDX = 0;
-  let joyDY = 0;
+  let joyDX = 0; // 左右
+  let joyDY = 0; // 前後
 
   function updateJoyRect() {
     const rect = joyBg.getBoundingClientRect();
@@ -188,14 +180,14 @@
   function handleJoyMove(e) {
     const dx = e.clientX - joyRect.x;
     const dy = e.clientY - joyRect.y;
-    const max = joyRect.r - 16; // 余白
+    const max = joyRect.r - 16;
     const dist = Math.sqrt(dx * dx + dy * dy);
     const ratio = dist > max ? max / dist : 1;
     const ndx = dx * ratio;
     const ndy = dy * ratio;
 
-    joyDX = ndx / max; // -1〜1
-    joyDY = ndy / max; // -1〜1
+    joyDX = ndx / max; // -1〜1（右が＋）
+    joyDY = ndy / max; // -1〜1（下が＋）
 
     joyStick.style.transform =
       `translate(calc(-50% + ${ndx}px), calc(-50% + ${ndy}px))`;
@@ -249,16 +241,35 @@
   function animate() {
     requestAnimationFrame(animate);
 
-    // ジョイスティック前後移動（上で前、下で後ろ）
-    if (Math.abs(joyDY) > 0.05) {
-      const forward = -joyDY; // 上に倒すとマイナスなので反転
-      const speed = 0.12;
+    const deadZone = 0.08;
+    let moveX = 0;
+    let moveZ = 0;
+
+    if (Math.abs(joyDX) > deadZone || Math.abs(joyDY) > deadZone) {
+      const speedBase = 0.12;
+      const mag = Math.min(1, Math.hypot(joyDX, joyDY));
+      const speed = speedBase * mag;
+
+      const forward = -joyDY; // 上に倒すと前に進む
+      const strafe = joyDX;   // 右に倒すと右へ
+
+      moveZ = forward * speed;
+      moveX = strafe * speed * 0.7;
+    }
+
+    if (moveZ !== 0 || moveX !== 0) {
       const minZ = -spacingZ * (Math.ceil(WORKS.length / 2)) - 4;
       const maxZ = 6;
+      const minX = -2.2;
+      const maxX = 2.2;
 
-      camera.position.z += forward * speed;
+      camera.position.z += moveZ;
+      camera.position.x += moveX;
+
       if (camera.position.z < minZ) camera.position.z = minZ;
       if (camera.position.z > maxZ) camera.position.z = maxZ;
+      if (camera.position.x < minX) camera.position.x = minX;
+      if (camera.position.x > maxX) camera.position.x = maxX;
     }
 
     renderer.render(scene, camera);
