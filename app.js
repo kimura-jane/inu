@@ -1,8 +1,10 @@
-// app.js : TAF DOG MUSEUM フル版（視点修正版）
-// 依存: three.js, data.js (const WORKS = [...])
+// app.js : TAF DOG MUSEUM（視点 & 壁貼り付け 修正版）
+// 依存 : three.js, data.js (const WORKS = [...])
 
 (function () {
-  // ---------- 基本セットアップ ----------
+  // --------------------------------
+  // 基本セットアップ
+  // --------------------------------
   const canvas = document.getElementById('scene');
   if (!canvas) return;
 
@@ -22,7 +24,9 @@
     0.1,
     200
   );
-  camera.position.set(0, 3, 8);
+
+  // 後で updateCameraImmediate で位置決めする
+  camera.position.set(0, 4, -10);
 
   const ambient = new THREE.AmbientLight(0xffffff, 0.45);
   scene.add(ambient);
@@ -31,10 +35,13 @@
   dirLight.position.set(3, 5, 4);
   scene.add(dirLight);
 
-  // ---------- 美術館空間 ----------
+  // --------------------------------
+  // 美術館空間
+  // --------------------------------
   const hallLength = 80;
   const hallWidth = 10;
   const wallHeight = 5;
+  const FRAME_DEPTH = 0.04; // 額縁の厚み（壁にほぼ貼り付け）
 
   const texLoader = new THREE.TextureLoader();
 
@@ -79,7 +86,7 @@
   wallRight.rotation.y = -Math.PI / 2;
   scene.add(wallRight);
 
-  // 天井ライト
+  // 天井ライト（ライン）
   const ceilingLights = new THREE.Group();
   const lightCount = 12;
   for (let i = 0; i < lightCount; i++) {
@@ -96,14 +103,21 @@
   }
   scene.add(ceilingLights);
 
-  // ---------- 額縁＋スポットライト ----------
+  // --------------------------------
+  // 額縁＋スポットライト
+  // --------------------------------
   const clickableMeshes = [];
   const frameGroup = new THREE.Group();
   scene.add(frameGroup);
 
   function createFrameMesh(width, height, variant) {
-    const depth = 0.15;
-    const frameGeo = new THREE.BoxGeometry(width + 0.6, height + 0.6, depth);
+    // 厚みを薄くして壁にほぼ密着
+    const frameGeo = new THREE.BoxGeometry(
+      width + 0.6,
+      height + 0.6,
+      FRAME_DEPTH
+    );
+
     let color = 0x1a1a1a;
     let metalness = 0.3;
     let roughness = 0.6;
@@ -129,13 +143,19 @@
     });
     const frame = new THREE.Mesh(frameGeo, frameMat);
 
-    const innerGeo = new THREE.BoxGeometry(width + 0.25, height + 0.25, depth + 0.01);
+    // 内側の黒いマット
+    const innerGeo = new THREE.BoxGeometry(
+      width + 0.25,
+      height + 0.25,
+      FRAME_DEPTH * 0.6
+    );
     const innerMat = new THREE.MeshStandardMaterial({
       color: 0x050506,
       roughness: 0.9,
     });
     const inner = new THREE.Mesh(innerGeo, innerMat);
-    inner.position.z = 0.04;
+    // ほんの少しだけ前に出す
+    inner.position.z = FRAME_DEPTH * 0.15;
     frame.add(inner);
 
     return { frame, inner };
@@ -147,7 +167,11 @@
     const margin = 3.2;
     const startX = -hallLength / 2 + margin * 1.5;
     const y = 2.4;
-    const z = isLeftWall ? -hallWidth / 2 + 0.02 : hallWidth / 2 - 0.02;
+
+    // 壁に貼り付ける（中心が壁面とほぼ同じ）
+    const z = isLeftWall
+      ? -hallWidth / 2 + FRAME_DEPTH / 2 + 0.001
+      : hallWidth / 2 - FRAME_DEPTH / 2 - 0.001;
     const rotY = isLeftWall ? Math.PI / 2 : -Math.PI / 2;
 
     const perSide = Math.min(WORKS.length, 14);
@@ -157,6 +181,7 @@
 
       const tex = texLoader.load(work.image);
       tex.minFilter = THREE.LinearFilter;
+
       const w = 2.0;
       const h = 3.2;
 
@@ -164,6 +189,7 @@
       frame.position.set(x, y, z);
       frame.rotation.y = rotY;
 
+      // 作品画像
       const imgGeo = new THREE.PlaneGeometry(w, h);
       const imgMat = new THREE.MeshStandardMaterial({
         map: tex,
@@ -171,9 +197,10 @@
         metalness: 0.2,
       });
       const imgMesh = new THREE.Mesh(imgGeo, imgMat);
-      imgMesh.position.set(0, 0, 0.09);
+      imgMesh.position.set(0, 0, FRAME_DEPTH * 0.5);
       inner.add(imgMesh);
 
+      // スポットライト（上の小さいライト）
       const spotGeo = new THREE.ConeGeometry(0.12, 0.28, 16);
       const spotMat = new THREE.MeshStandardMaterial({
         color: 0xffffff,
@@ -181,7 +208,7 @@
         emissiveIntensity: 0.7,
       });
       const spot = new THREE.Mesh(spotGeo, spotMat);
-      spot.position.set(0, h / 2 + 0.55, -0.02);
+      spot.position.set(0, h / 2 + 0.55, -FRAME_DEPTH * 0.6);
       spot.rotation.x = -Math.PI / 2.3;
       frame.add(spot);
 
@@ -194,7 +221,9 @@
   addWorksToWall(true);
   addWorksToWall(false);
 
-  // ---------- アバター ----------
+  // --------------------------------
+  // アバター
+  // --------------------------------
   const avatarGroup = new THREE.Group();
   scene.add(avatarGroup);
 
@@ -233,7 +262,15 @@
     head.position.y = 2.4;
     group.add(head);
 
-    const hatGeo = new THREE.SphereGeometry(0.57, 24, 24, 0, Math.PI * 2, 0, Math.PI / 2);
+    const hatGeo = new THREE.SphereGeometry(
+      0.57,
+      24,
+      24,
+      0,
+      Math.PI * 2,
+      0,
+      Math.PI / 2
+    );
     const hatMat = new THREE.MeshStandardMaterial({
       color: hat,
       roughness: 0.4,
@@ -271,19 +308,28 @@
     const bodyColor = coatColors[seed % coatColors.length];
 
     const bodyGeo = new THREE.BoxGeometry(1.8, 1.0, 2.4);
-    const bodyMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.7 });
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: bodyColor,
+      roughness: 0.7,
+    });
     const body = new THREE.Mesh(bodyGeo, bodyMat);
     body.position.y = 0.9;
     group.add(body);
 
     const headGeo = new THREE.BoxGeometry(1.4, 1.3, 1.4);
-    const headMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.7 });
+    const headMat = new THREE.MeshStandardMaterial({
+      color: bodyColor,
+      roughness: 0.7,
+    });
     const head = new THREE.Mesh(headGeo, headMat);
     head.position.set(0, 1.7, 0.2);
     group.add(head);
 
     const earGeo = new THREE.BoxGeometry(0.4, 0.7, 0.15);
-    const earMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.7 });
+    const earMat = new THREE.MeshStandardMaterial({
+      color: bodyColor,
+      roughness: 0.7,
+    });
     const earL = new THREE.Mesh(earGeo, earMat);
     const earR = earL.clone();
     earL.position.set(-0.6, 2.2, 0);
@@ -303,7 +349,10 @@
     group.add(legFL, legFR, legBL, legBR);
 
     const tailGeo = new THREE.CylinderGeometry(0.12, 0.1, 0.9, 12);
-    const tailMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.7 });
+    const tailMat = new THREE.MeshStandardMaterial({
+      color: bodyColor,
+      roughness: 0.7,
+    });
     const tail = new THREE.Mesh(tailGeo, tailMat);
     tail.position.set(0, 1.2, -1.2);
     tail.rotation.x = -Math.PI / 4;
@@ -313,31 +362,42 @@
   }
 
   const avatarWorldPos = new THREE.Vector3();
-  let cameraYaw = 0;
-  let cameraPitch = 0.05;
+  let cameraYaw = Math.PI / 2; // 廊下の奥方向
+  let cameraPitch = 0.05; // 少しだけ下向き
 
   function updateCameraImmediate() {
     if (!currentAvatar) return;
+
     avatarWorldPos.setFromMatrixPosition(currentAvatar.matrixWorld);
 
-    // 後ろから少し上・斜め見下ろし
-    const radius = 5.0;
-    const offsetY = 2.4;
+    const forward = new THREE.Vector3(
+      Math.sin(cameraYaw),
+      0,
+      Math.cos(cameraYaw)
+    );
+    const up = new THREE.Vector3(0, 1, 0);
+    const right = new THREE.Vector3().crossVectors(forward, up);
 
-    // forward は yaw 方向、カメラはその逆側（後ろ）に置く
-    const cx =
-      avatarWorldPos.x - radius * Math.sin(cameraYaw) * Math.cos(cameraPitch);
-    const cz =
-      avatarWorldPos.z - radius * Math.cos(cameraYaw) * Math.cos(cameraPitch);
-    const cy =
-      avatarWorldPos.y + offsetY + radius * Math.sin(cameraPitch) * -0.3;
+    const backDistance = 9.0; // アバターを小さめに
+    const upOffsetBase = 3.2;
+    const upOffset = upOffsetBase + cameraPitch * 3.0; // 視線上下を少し反映
 
-    camera.position.set(cx, cy, cz);
-    camera.lookAt(
+    const camPos = new THREE.Vector3()
+      .copy(avatarWorldPos)
+      .addScaledVector(forward, -backDistance) // 後ろ
+      .addScaledVector(up, upOffset); // 上
+
+    camera.position.copy(camPos);
+
+    const lookTarget = new THREE.Vector3(
       avatarWorldPos.x,
-      avatarWorldPos.y + 1.6,
+      avatarWorldPos.y + 1.5 + cameraPitch * 4.0,
       avatarWorldPos.z
     );
+    camera.lookAt(lookTarget);
+
+    // アバターの向きもカメラ方向に合わせる（常に前を向いて歩く感じ）
+    currentAvatar.rotation.y = cameraYaw + Math.PI;
   }
 
   function updateCamera() {
@@ -352,18 +412,19 @@
     const avatar =
       type === 'human' ? createHumanVariant(seed) : createDogVariant(seed);
 
-    // 廊下の手前寄り、中央付近
+    // 廊下の手前寄り・中央
     avatar.position.set(-hallLength / 2 + 6, 0, 0);
     avatarGroup.add(avatar);
     currentAvatar = avatar;
 
-    // 初期向き: 廊下の奥(+X方向)を見る
     cameraYaw = Math.PI / 2;
-    cameraPitch = 0.06;
+    cameraPitch = 0.05;
     updateCameraImmediate();
   }
 
-  // ---------- 視点ドラッグ ----------
+  // --------------------------------
+  // 視点ドラッグ
+  // --------------------------------
   let isDraggingView = false;
   let lastPointerX = 0;
   let lastPointerY = 0;
@@ -373,6 +434,7 @@
     lastPointerX = e.clientX || e.touches?.[0]?.clientX || 0;
     lastPointerY = e.clientY || e.touches?.[0]?.clientY || 0;
   }
+
   function onPointerMove(e) {
     if (!isDraggingView) return;
     const x = e.clientX || e.touches?.[0]?.clientX || 0;
@@ -388,6 +450,7 @@
     const limit = 0.45;
     cameraPitch = Math.max(-limit, Math.min(limit, cameraPitch));
   }
+
   function onPointerUp() {
     isDraggingView = false;
   }
@@ -397,7 +460,9 @@
   window.addEventListener('pointerup', onPointerUp);
   window.addEventListener('pointercancel', onPointerUp);
 
-  // ---------- ジョイスティック ----------
+  // --------------------------------
+  // ジョイスティック
+  // --------------------------------
   const joyBg = document.getElementById('joy-bg');
   const joyStick = document.getElementById('joy-stick');
   let joyRect = { x: 0, y: 0, r: 0 };
@@ -422,11 +487,13 @@
     const t = e.touches ? e.touches[0] : e;
     moveJoy(t.clientX, t.clientY);
   }
+
   function handleJoyMove(e) {
     if (!joyActive) return;
     const t = e.touches ? e.touches[0] : e;
     moveJoy(t.clientX, t.clientY);
   }
+
   function handleJoyEnd() {
     joyActive = false;
     joyDX = 0;
@@ -444,7 +511,7 @@
     const nx = (dx / dist) * clamped;
     const ny = (dy / dist) * clamped;
 
-    // 上: 前進, 右: 右移動
+    // 上：前進 / 下：後退 / 右：右 / 左：左
     joyDX = nx / joyRect.r;
     joyDY = -ny / joyRect.r;
 
@@ -463,7 +530,9 @@
   window.addEventListener('pointerup', handleJoyEnd);
   window.addEventListener('pointercancel', handleJoyEnd);
 
-  // ---------- クリック判定（作品） ----------
+  // --------------------------------
+  // 作品クリック（モーダル表示）
+  // --------------------------------
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
 
@@ -491,9 +560,7 @@
     infoPanel.classList.remove('active');
   }
 
-  if (infoClose) {
-    infoClose.addEventListener('click', hideInfo);
-  }
+  if (infoClose) infoClose.addEventListener('click', hideInfo);
   if (infoPanel) {
     infoPanel.addEventListener('click', (e) => {
       if (e.target === infoPanel) hideInfo();
@@ -511,13 +578,15 @@
     raycaster.setFromCamera(pointer, camera);
     const hits = raycaster.intersectObjects(clickableMeshes, true);
     if (hits.length > 0) {
-      const m = hits[0].object;
-      const work = m.parent?.userData?.work || m.userData.work;
+      const obj = hits[0].object;
+      const work = obj.parent?.userData?.work || obj.userData.work;
       if (work) showInfo(work);
     }
   });
 
-  // ---------- アバターチェンジ UI ----------
+  // --------------------------------
+  // アバターチェンジ UI
+  // --------------------------------
   const btnHuman =
     document.getElementById('btn-human') ||
     document.querySelector('[data-avatar="human"]');
@@ -553,7 +622,9 @@
   setAvatar('human');
   updateAvatarButtons();
 
-  // ---------- アニメーション ----------
+  // --------------------------------
+  // アニメーション
+  // --------------------------------
   const clock = new THREE.Clock();
 
   function clampAvatarToHall() {
@@ -601,7 +672,9 @@
 
   animate();
 
-  // ---------- リサイズ ----------
+  // --------------------------------
+  // リサイズ
+  // --------------------------------
   window.addEventListener('resize', () => {
     const w = window.innerWidth;
     const h = window.innerHeight;
