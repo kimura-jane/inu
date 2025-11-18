@@ -3,7 +3,7 @@ let scene, camera, renderer;
 let avatar, avatarType = "human";
 
 // カメラ角度
-let yaw = Math.PI;     // 左右（初期は後ろから正面を見る）
+let yaw = Math.PI;     // 左右
 let pitch = -0.15;     // 上下
 
 let isDraggingView = false;
@@ -18,7 +18,7 @@ let joyVec = { x: 0, y: 0 };
 
 const ROOM_SIZE = 1600;
 
-// data.js がなくても落ちないようにする
+// data.js から作品リスト
 const worksData = Array.isArray(window.WORKS) ? window.WORKS : [];
 
 const clickableObjects = [];
@@ -57,16 +57,15 @@ function init() {
   dir.position.set(800, 1200, 400);
   scene.add(dir);
 
-  // 部屋と絵
+  // 部屋＋絵
   createGalleryRoom();
   createArtworks();
 
   // アバター
   avatar = createHumanAvatar();
-  scene.add(avatar);
   avatarType = "human";
-
   avatar.position.set(0, 0, 400);
+  scene.add(avatar);
 
   // UI
   setupJoystick();
@@ -144,7 +143,7 @@ function createGalleryRoom() {
 
   scene.add(room);
 
-  // 天井ライト列
+  // 天井スポットライト列
   const spotRow = 7;
   const gap = ROOM_SIZE / (spotRow + 1);
   for (let i = 0; i < spotRow; i++) {
@@ -159,9 +158,7 @@ function createGalleryRoom() {
 
 // ====== 絵と額 ======
 function createArtworks() {
-  if (!Array.isArray(worksData) || worksData.length === 0) {
-    return;
-  }
+  if (!Array.isArray(worksData) || worksData.length === 0) return;
 
   const count = worksData.length;
   const perWall = Math.ceil(count / 4);
@@ -175,6 +172,10 @@ function createArtworks() {
   ];
 
   const texLoader = new THREE.TextureLoader();
+  const maxAniso =
+    (renderer.capabilities && renderer.capabilities.getMaxAnisotropy
+      ? renderer.capabilities.getMaxAnisotropy()
+      : 1) || 1;
 
   for (let i = 0; i < count; i++) {
     const work = worksData[i];
@@ -229,8 +230,14 @@ function createArtworks() {
     canvas.position.z = frameSetting.depth / 2 + 0.1;
     group.add(canvas);
 
+    // テクスチャ読み込み（モザイク対策で異方性フィルタON）
     texLoader.load(work.image, (tex) => {
-      tex.colorSpace = THREE.SRGBColorSpace || THREE.sRGBEncoding;
+      if (THREE.SRGBColorSpace) {
+        tex.colorSpace = THREE.SRGBColorSpace;
+      } else if (THREE.sRGBEncoding) {
+        tex.encoding = THREE.sRGBEncoding;
+      }
+      tex.anisotropy = maxAniso;
       canvas.material.map = tex;
       canvas.material.needsUpdate = true;
     });
@@ -257,7 +264,7 @@ function createArtworks() {
   }
 }
 
-// ====== アバター生成 ======
+// ====== アバター ======
 function createHumanAvatar() {
   const group = new THREE.Group();
 
@@ -376,8 +383,8 @@ function changeAvatar(type) {
   if (avatar) scene.remove(avatar);
   avatarType = type;
   avatar = type === "human" ? createHumanAvatar() : createDogAvatar();
-  scene.add(avatar);
   avatar.position.set(0, 0, 400);
+  scene.add(avatar);
 }
 
 // ====== ジョイスティック ======
@@ -435,7 +442,7 @@ function getPoint(e) {
   return { x: e.clientX, y: e.clientY };
 }
 
-// ====== 視線ドラッグ（左右＋上下） ======
+// ====== 視線ドラッグ（上下左右） ======
 function setupViewDrag() {
   const canvas = document.getElementById("scene");
   const joy = document.getElementById("joy-bg");
@@ -458,15 +465,14 @@ function setupViewDrag() {
     const dx = p.x - dragStartX;
     const dy = p.y - dragStartY;
 
-    const rotSpeedX = 0.005;  // 左右
-    const rotSpeedY = 0.004;  // 上下
+    const rotSpeedX = 0.005;
+    const rotSpeedY = 0.004;
 
     yaw = dragStartYaw - dx * rotSpeedX;
     pitch = dragStartPitch - dy * rotSpeedY;
 
-    // 上下の角度を制限
-    const minPitch = -0.6; // 下を向きすぎない
-    const maxPitch = 0.4;  // 上を向きすぎない
+    const minPitch = -0.6;
+    const maxPitch = 0.4;
     if (pitch < minPitch) pitch = minPitch;
     if (pitch > maxPitch) pitch = maxPitch;
   };
@@ -526,6 +532,8 @@ function animate() {
 
   if (avatar) {
     const speed = 3.0;
+
+    // ★ 前後を反転（上に倒すと前進）
     const forward = -joyVec.y * speed;
     const strafe = joyVec.x * speed;
 
@@ -536,17 +544,15 @@ function animate() {
     avatar.position.z += cos * forward - sin * strafe;
     avatar.position.y = 0;
 
-    // カメラ位置：アバターの後ろ・少し上・少し離す
+    // カメラをアバターの少し上・後ろに配置
     let offset = new THREE.Vector3(0, 220, 520);
-
-    // まず上下（X軸）を回転、そのあと左右（Y軸）
     offset.applyAxisAngle(new THREE.Vector3(1, 0, 0), pitch);
     offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
 
     camera.position.copy(avatar.position).add(offset);
 
     const target = avatar.position.clone();
-    target.y += (avatarType === "human" ? 150 : 80);
+    target.y += avatarType === "human" ? 150 : 80;
     camera.lookAt(target);
 
     avatar.rotation.y = yaw;
