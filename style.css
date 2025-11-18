@@ -1,40 +1,46 @@
+/* 全体レイアウト */
 * {
   box-sizing: border-box;
+}
+
+html,
+body {
   margin: 0;
   padding: 0;
-}
-
-html, body {
-  width: 100%;
   height: 100%;
-  background: #050507;
-  color: #fff;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
   overflow: hidden;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue",
+    Arial, sans-serif;
+  background: #050507;
+  color: #f5f5f5;
 }
 
+/* 3Dキャンバス */
 #scene {
   position: fixed;
   inset: 0;
   display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
 }
 
 /* 上部UI */
 #ui-top {
   position: fixed;
-  top: env(safe-area-inset-top, 8px);
+  top: env(safe-area-inset-top, 0);
   left: 0;
   right: 0;
-  padding: 8px 16px;
+  padding: 12px 16px;
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   z-index: 10;
   pointer-events: none;
 }
 
-#museum-title {
-  letter-spacing: 0.15em;
+#logo {
+  letter-spacing: 0.18em;
   font-size: 14px;
   font-weight: 600;
   pointer-events: auto;
@@ -45,32 +51,34 @@ html, body {
   align-items: center;
   gap: 6px;
   pointer-events: auto;
-  font-size: 12px;
 }
 
 #avatar-label {
-  opacity: 0.75;
+  font-size: 12px;
+  opacity: 0.8;
 }
 
+/* アバターボタン */
 .avatar-btn {
+  border: none;
   border-radius: 999px;
-  padding: 4px 14px;
-  border: 1px solid rgba(255,255,255,0.4);
-  background: transparent;
-  color: #fff;
-  font-size: 12px;
-  min-width: 44px;
+  padding: 6px 14px;
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f5f5f5;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .avatar-btn.active {
   background: #ffffff;
-  color: #000;
+  color: #111111;
 }
 
 /* ジョイスティック */
 #joy-container {
   position: fixed;
-  bottom: calc(env(safe-area-inset-bottom, 8px) + 20px);
+  bottom: calc(16px + env(safe-area-inset-bottom, 0));
   left: 50%;
   transform: translateX(-50%);
   width: 120px;
@@ -79,64 +87,81 @@ html, body {
   align-items: center;
   justify-content: center;
   z-index: 9;
-}
-
-#joy-bg {
-  width: 110px;
-  height: 110px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, #222 0, #000 70%);
-  box-shadow: 0 0 18px rgba(0,0,0,0.75);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   touch-action: none;
 }
 
-#joy-stick {
-  width: 54px;
-  height: 54px;
+#joy-bg {
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
-  background: #f5f5f5;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.8);
-  transform: translate(0, 0);
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(255, 255, 255, 0.16),
+    rgba(0, 0, 0, 0.9)
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* 拡大ビュー（JS側で要素生成するが念のためスタイルも用意） */
+#joy-stick {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 16px rgba(0, 0, 0, 0.6);
+}
+
+/* 作品インフォパネル */
 #info-panel {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.85);
-  display: none;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
   align-items: center;
   justify-content: center;
   z-index: 20;
 }
 
+#info-panel.hidden {
+  display: none;
+}
+
 #info-inner {
-  max-width: 96vw;
-  max-height: 90vh;
-  background: #111;
+  width: min(90vw, 420px);
+  max-height: 80vh;
+  background: #111114;
   border-radius: 16px;
-  overflow: hidden;
-  position: relative;
+  padding: 16px 16px 20px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.65);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#info-close {
+  align-self: flex-end;
+  border: none;
+  border-radius: 999px;
+  width: 28px;
+  height: 28px;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f5f5f5;
+}
+
+#info-title {
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  opacity: 0.9;
 }
 
 #info-image {
-  display: block;
-  max-width: 100%;
-  max-height: 80vh;
-  margin: 32px auto 8px;
+  width: 100%;
+  border-radius: 10px;
+  object-fit: cover;
 }
 
-#info-caption {
-  color: #fff;
-  font-size: 14px;
-  text-align: center;
-  padding: 0 12px 12px;
-}
-
-/* スマホで誤タップ防止：キャンバスは基本操作可能 */
-canvas {
-  touch-action: none;
-}
+/* スクロール防止のため body には touch-action は付けない */
