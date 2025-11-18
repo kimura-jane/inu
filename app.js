@@ -1,620 +1,588 @@
 // app.js  TAF DOG MUSEUM
 (function () {
-  const canvas = document.getElementById('scene');
-  if (!canvas || !window.THREE) return;
+  'use strict';
 
-  // ---------- 基本セットアップ ----------
+  // ---------- 基本セット ----------
+  const canvas = document.getElementById('scene');
+
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
-    alpha: true
   });
   renderer.setPixelRatio(window.devicePixelRatio);
+  resizeRenderer();
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x050508);
+  scene.background = new THREE.Color(0x050509);
 
   const camera = new THREE.PerspectiveCamera(
     55,
     window.innerWidth / window.innerHeight,
     0.1,
-    300
+    200
   );
 
-  const HALL_LENGTH = 80;
-  const HALL_WIDTH = 14;
-  const WALL_HEIGHT = 7;
+  // カメラはアバターの真後ろから少し上
+  const cameraBaseOffset = new THREE.Vector3(0, 2.0, -6);
 
-  // ---------- ライト ----------
-  const ambient = new THREE.AmbientLight(0xffffff, 0.35);
-  scene.add(ambient);
+  const hemiLight = new THREE.HemisphereLight(0xffffff, 0x202020, 0.7);
+  scene.add(hemiLight);
 
-  const ceilingLightMat = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    emissive: 0xffffff,
-    emissiveIntensity: 1.3
-  });
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+  dirLight.position.set(5, 10, -5);
+  scene.add(dirLight);
 
-  // ---------- 床・天井・壁 ----------
-  const floorMat = new THREE.MeshStandardMaterial({
-    color: 0x111111,
-    roughness: 0.9,
-    metalness: 0.0
-  });
-  const floorGeo = new THREE.PlaneGeometry(HALL_LENGTH, HALL_WIDTH);
-  const floor = new THREE.Mesh(floorGeo, floorMat);
-  floor.rotation.x = -Math.PI / 2;
-  floor.position.y = 0;
-  scene.add(floor);
-
-  const ceilingMat = new THREE.MeshStandardMaterial({
-    color: 0x050505,
-    roughness: 1.0,
-    metalness: 0.0
-  });
-  const ceilingGeo = new THREE.PlaneGeometry(HALL_LENGTH, HALL_WIDTH);
-  const ceiling = new THREE.Mesh(ceilingGeo, ceilingMat);
-  ceiling.rotation.x = Math.PI / 2;
-  ceiling.position.y = WALL_HEIGHT;
-  scene.add(ceiling);
-
-  const wallMat = new THREE.MeshStandardMaterial({
-    color: 0x777777,
-    roughness: 0.9,
-    metalness: 0.0
-  });
-  const wallGeo = new THREE.PlaneGeometry(HALL_LENGTH, WALL_HEIGHT);
-
-  const leftWall = new THREE.Mesh(wallGeo, wallMat);
-  leftWall.position.set(-HALL_WIDTH / 2, WALL_HEIGHT / 2, HALL_LENGTH / 2);
-  leftWall.rotation.y = Math.PI / 2;
-  scene.add(leftWall);
-
-  const rightWall = new THREE.Mesh(wallGeo, wallMat);
-  rightWall.position.set(HALL_WIDTH / 2, WALL_HEIGHT / 2, HALL_LENGTH / 2);
-  rightWall.rotation.y = -Math.PI / 2;
-  scene.add(rightWall);
-
-  // ---------- 天井ライト ----------
-  const NUM_LIGHTS = 10;
-  const lightPanelGeo = new THREE.BoxGeometry(4, 0.05, 0.6);
-  for (let i = 0; i < NUM_LIGHTS; i++) {
-    const z = 6 + ((HALL_LENGTH - 16) / (NUM_LIGHTS - 1)) * i;
-
-    const panel = new THREE.Mesh(lightPanelGeo, ceilingLightMat);
-    panel.position.set(0, WALL_HEIGHT - 0.15, z);
-    scene.add(panel);
-
-    const pLight = new THREE.PointLight(0xffffff, 0.6, 25, 2);
-    pLight.position.set(0, WALL_HEIGHT - 0.1, z);
-    scene.add(pLight);
-  }
-
-  // ---------- 額縁 & 絵 ----------
-  const clickablePaintings = [];
+  // ---------- グローバル状態 ----------
   const textureLoader = new THREE.TextureLoader();
+  const clickablePaints = [];
 
-  const frameDepth = 0.35;
-  const frameOuterW = 3.2;
-  const frameOuterH = 4.4;
-  const frameInnerW = 2.6;
-  const frameInnerH = 3.8;
-
-  const frameGeos = {
-    gold: new THREE.BoxGeometry(frameOuterW, frameOuterH, frameDepth),
-    dark: new THREE.BoxGeometry(frameOuterW, frameOuterH, frameDepth),
-    metal: new THREE.BoxGeometry(frameOuterW, frameOuterH, frameDepth)
+  const corridor = {
+    length: 80,
+    halfWidth: 4.0,
+    wallHeight: 5,
   };
 
-  const frameMats = {
-    gold: new THREE.MeshStandardMaterial({
-      color: 0x8c6b2e,
-      metalness: 0.8,
-      roughness: 0.3
-    }),
-    dark: new THREE.MeshStandardMaterial({
-      color: 0x111111,
-      metalness: 0.4,
-      roughness: 0.6
-    }),
-    metal: new THREE.MeshStandardMaterial({
-      color: 0xb0b0b0,
-      metalness: 1.0,
-      roughness: 0.3
-    })
-  };
-
-  // 壁にぴったり貼り付くように、Z=長手方向 / X=幅 に注意
-  const pictureGeo = new THREE.PlaneGeometry(frameInnerH, frameInnerW);
-
-  const frameTypes = ['gold', 'dark', 'metal'];
-
-  const spotlightMat = new THREE.MeshBasicMaterial({
-    color: 0xffffff,
-    transparent: true,
-    opacity: 0.35
-  });
-  const spotlightGeo = new THREE.ConeGeometry(0.7, 2.4, 16, 1, true);
-
-  function addPaintings() {
-    let works = null;
-    if (typeof WORKS !== 'undefined') {
-      works = WORKS;
-    } else if (Array.isArray(window.WORKS)) {
-      works = window.WORKS;
-    }
-    if (!Array.isArray(works)) return;
-
-    const spacing = (HALL_LENGTH - 20) / works.length;
-
-    for (let i = 0; i < works.length; i++) {
-      const work = works[i];
-      const isLeft = i % 2 === 0;
-      const sideSign = isLeft ? -1 : 1;
-      const wallX = (HALL_WIDTH / 2 - 0.05 - frameDepth / 2) * sideSign;
-      const baseZ = 10 + spacing * i;
-
-      const frameType = frameTypes[i % frameTypes.length];
-      const frameGeo = frameGeos[frameType];
-      const frameMat = frameMats[frameType];
-
-      // 額縁（壁に水平）
-      const frameMesh = new THREE.Mesh(frameGeo, frameMat);
-      frameMesh.position.set(wallX, WALL_HEIGHT * 0.55, baseZ);
-      frameMesh.rotation.y = isLeft ? Math.PI / 2 : -Math.PI / 2;
-      scene.add(frameMesh);
-
-      // 絵
-      const tex = textureLoader.load(work.image);
-      tex.minFilter = THREE.LinearFilter;
-      const picMat = new THREE.MeshBasicMaterial({ map: tex });
-
-      const picture = new THREE.Mesh(pictureGeo, picMat);
-      const frontOffset = frameDepth / 2 + 0.01;
-      picture.position.set(
-        wallX + (isLeft ? frontOffset : -frontOffset),
-        WALL_HEIGHT * 0.55,
-        baseZ
-      );
-      picture.rotation.y = isLeft ? Math.PI / 2 : -Math.PI / 2;
-      picture.userData.work = work;
-      scene.add(picture);
-      clickablePaintings.push(picture);
-
-      // スポットライト（壁側から斜め下）
-      const cone = new THREE.Mesh(spotlightGeo, spotlightMat);
-      cone.position.set(
-        wallX + (isLeft ? frontOffset * 0.3 : -frontOffset * 0.3),
-        WALL_HEIGHT - 0.4,
-        baseZ
-      );
-      cone.rotation.x = Math.PI;
-      cone.rotation.z = isLeft ? -Math.PI / 2 : Math.PI / 2;
-      scene.add(cone);
-    }
-  }
-
-  addPaintings();
-
-  // ---------- アバター ----------
   const avatarGroup = new THREE.Group();
   scene.add(avatarGroup);
+  let avatarType = 'human'; // 'human' | 'dog'
+  let avatarYaw = 0;        // Y軸回転（ラジアン）
 
-  const AVATAR_START_Z = 6;
-  const AVATAR_Y = 0;
-
-  let currentAvatar = null;
-  let currentAvatarType = 'human';
-
-  const HUMAN_COLORS = [
-    0x4477ff, 0xff9933, 0x55aa55, 0xaa55aa, 0xcccc33,
-    0xff5555, 0x339999, 0x996633, 0x7777ff, 0xff77aa
+  // ---------- アバターのバリエーション ----------
+  const humanPresets = [
+    { coat: 0x264653, pants: 0x000000, skin: 0xf2c09a },
+    { coat: 0xe76f51, pants: 0x2b2d42, skin: 0xffd1a3 },
+    { coat: 0x2a9d8f, pants: 0x1d3557, skin: 0xf4c095 },
+    { coat: 0xf4a261, pants: 0x000000, skin: 0xffc9a3 },
+    { coat: 0x6d597a, pants: 0x22223b, skin: 0xf1c0a0 },
+    { coat: 0x457b9d, pants: 0x1d3557, skin: 0xf5c19c },
+    { coat: 0xd62828, pants: 0x000000, skin: 0xffc8a2 },
+    { coat: 0x1b4332, pants: 0x000000, skin: 0xfad1a4 },
+    { coat: 0x8ecae6, pants: 0x023047, skin: 0xf7c7a3 },
+    { coat: 0x343a40, pants: 0x000000, skin: 0xf1c49b },
   ];
-  const DOG_COLORS = [
-    0x333333, 0x886644, 0xffffff, 0xffe4b5, 0x444444,
-    0xaa7744, 0xd2b48c, 0x555555, 0xdeb887, 0x666666
+
+  const dogPresets = [
+    { body: 0x444444, face: 0x777777 },
+    { body: 0x222222, face: 0xaaaaaa },
+    { body: 0x3a2a1a, face: 0xc39a6b },
+    { body: 0x111827, face: 0x4b5563 },
+    { body: 0x1f2933, face: 0x9fb3c8 },
+    { body: 0x4b3f72, face: 0xd9bbf9 },
+    { body: 0x283618, face: 0xdda15e },
+    { body: 0x1f2937, face: 0xe5e7eb },
+    { body: 0x0f172a, face: 0xfbbf24 },
+    { body: 0x2d3748, face: 0x63b3ed },
   ];
 
-  function createHuman(index) {
-    const g = new THREE.Group();
-    const skinColor = 0xd8b49c;
-    const bodyColor = HUMAN_COLORS[index % HUMAN_COLORS.length];
-    const hairColor = index % 2 === 0 ? 0x111111 : 0x553322;
+  // ---------- 廊下と額縁 ----------
+  buildCorridor();
+  placePaintings();
 
-    const legGeo = new THREE.CylinderGeometry(0.25, 0.25, 1.2, 12);
-    const legMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
-    const legL = new THREE.Mesh(legGeo, legMat);
-    const legR = legL.clone();
-    legL.position.set(-0.35, 0.6, 0);
-    legR.position.set(0.35, 0.6, 0);
-    g.add(legL, legR);
-
-    const bodyGeo = new THREE.CylinderGeometry(0.9, 0.9, 2.2, 20);
-    const bodyMat = new THREE.MeshStandardMaterial({
-      color: bodyColor,
-      roughness: 0.7,
-      metalness: 0.1
-    });
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
-    body.position.y = 2.2;
-    g.add(body);
-
-    const armGeo = new THREE.CylinderGeometry(0.2, 0.2, 1.6, 12);
-    const armMat = bodyMat;
-    const armL = new THREE.Mesh(armGeo, armMat);
-    const armR = new THREE.Mesh(armGeo, armMat);
-    armL.position.set(-1.15, 2.4, 0);
-    armR.position.set(1.15, 2.4, 0);
-    armL.rotation.z = Math.PI / 16;
-    armR.rotation.z = -Math.PI / 16;
-    g.add(armL, armR);
-
-    const neckGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.4, 12);
-    const neckMat = new THREE.MeshStandardMaterial({ color: skinColor });
-    const neck = new THREE.Mesh(neckGeo, neckMat);
-    neck.position.y = 3.5;
-    g.add(neck);
-
-    const headGeo = new THREE.SphereGeometry(0.9, 20, 20);
-    const headMat = neckMat;
-    const head = new THREE.Mesh(headGeo, headMat);
-    head.position.y = 4.6;
-    g.add(head);
-
-    const hairGeo = new THREE.SphereGeometry(0.95, 20, 20, 0, Math.PI * 2, 0, Math.PI / 2);
-    const hairMat = new THREE.MeshStandardMaterial({
-      color: hairColor,
-      roughness: 0.8,
-      metalness: 0.2
-    });
-    const hair = new THREE.Mesh(hairGeo, hairMat);
-    hair.position.y = 4.7;
-    g.add(hair);
-
-    return g;
-  }
-
-  function createDog(index) {
-    const g = new THREE.Group();
-    const color = DOG_COLORS[index % DOG_COLORS.length];
-
-    const bodyMat = new THREE.MeshStandardMaterial({
-      color,
-      roughness: 0.7,
-      metalness: 0.1
-    });
-
-    const bodyGeo = new THREE.BoxGeometry(2.2, 1.8, 3.0);
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
-    body.position.y = 1.2;
-    g.add(body);
-
-    const headGeo = new THREE.BoxGeometry(1.6, 1.6, 1.6);
-    const head = new THREE.Mesh(headGeo, bodyMat);
-    head.position.set(0, 2.2, 1.7);
-    g.add(head);
-
-    const earGeo = new THREE.BoxGeometry(0.4, 0.9, 0.2);
-    const earL = new THREE.Mesh(earGeo, bodyMat);
-    const earR = new THREE.Mesh(earGeo, bodyMat);
-    earL.position.set(-0.6, 3.0, 1.4);
-    earR.position.set(0.6, 3.0, 1.4);
-    g.add(earL, earR);
-
-    const legGeo = new THREE.CylinderGeometry(0.22, 0.22, 1.1, 10);
-    const legMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
-    const legPositions = [
-      [-0.7, 0.55, 1.0],
-      [0.7, 0.55, 1.0],
-      [-0.7, 0.55, -1.0],
-      [0.7, 0.55, -1.0]
-    ];
-    legPositions.forEach(p => {
-      const leg = new THREE.Mesh(legGeo, legMat);
-      leg.position.set(p[0], p[1], p[2]);
-      g.add(leg);
-    });
-
-    const tailGeo = new THREE.CylinderGeometry(0.15, 0.25, 1.4, 10);
-    const tail = new THREE.Mesh(tailGeo, bodyMat);
-    tail.position.set(0, 2.0, -1.7);
-    tail.rotation.x = -Math.PI / 3;
-    g.add(tail);
-
-    return g;
-  }
-
-  const humans = [];
-  const dogs = [];
-  for (let i = 0; i < 10; i++) {
-    const h = createHuman(i);
-    h.visible = false;
-    humans.push(h);
-    avatarGroup.add(h);
-
-    const d = createDog(i);
-    d.visible = false;
-    dogs.push(d);
-    avatarGroup.add(d);
-  }
-
-  let currentHumanIndex = 0;
-  let currentDogIndex = 0;
-
-  function activateAvatar(type) {
-    currentAvatarType = type;
-    humans.forEach(h => (h.visible = false));
-    dogs.forEach(d => (d.visible = false));
-
-    if (type === 'human') {
-      currentAvatar = humans[currentHumanIndex];
-    } else {
-      currentAvatar = dogs[currentDogIndex];
-    }
-
-    currentAvatar.visible = true;
-    currentAvatar.position.set(0, AVATAR_Y, AVATAR_START_Z);
-    currentAvatar.rotation.y = 0;
-  }
-
-  activateAvatar('human');
-
-  // ---------- カメラ ----------
-  let cameraYaw = 0;
-  let cameraPitch = 0;
-  const CAMERA_DIST = 8;
-  const CAMERA_HEIGHT = 4;
-
-  function updateCamera() {
-    if (!currentAvatar) return;
-    const target = currentAvatar.position.clone();
-    target.y += 2.5;
-
-    const offset = new THREE.Vector3(
-      Math.sin(cameraYaw) * CAMERA_DIST,
-      CAMERA_HEIGHT,
-      -Math.cos(cameraYaw) * CAMERA_DIST
-    );
-
-    const camPos = target.clone().add(offset);
-    camera.position.copy(camPos);
-
-    const lookTarget = target.clone();
-    lookTarget.y += cameraPitch;
-    camera.lookAt(lookTarget);
-  }
-
-  // ---------- 視点ドラッグ ----------
-  let draggingView = false;
-  let lastX = 0;
-  let lastY = 0;
-
-  canvas.addEventListener('pointerdown', e => {
-    if (e.pointerType === 'touch' || e.button === 0) {
-      draggingView = true;
-      lastX = e.clientX;
-      lastY = e.clientY;
-    }
-  });
-
-  window.addEventListener('pointermove', e => {
-    if (!draggingView) return;
-    const dx = e.clientX - lastX;
-    const dy = e.clientY - lastY;
-    lastX = e.clientX;
-    lastY = e.clientY;
-
-    cameraYaw -= dx * 0.005;
-    cameraPitch -= dy * 0.003;
-    cameraPitch = Math.max(-1.0, Math.min(1.0, cameraPitch));
-  });
-
-  window.addEventListener('pointerup', () => {
-    draggingView = false;
-  });
+  // ---------- アバター初期生成 ----------
+  createAvatar('human');
+  avatarGroup.position.set(0, 0, 5);
+  updateCameraPosition();
 
   // ---------- ジョイスティック ----------
   const joyBg = document.getElementById('joy-bg');
   const joyStick = document.getElementById('joy-stick');
   let joyActive = false;
-  let joyCenter = { x: 0, y: 0 };
-  let joyDX = 0;
-  let joyDY = 0;
+  let joyOrigin = { x: 0, y: 0 };
+  let joyVector = { x: 0, y: 0 };
 
-  function updateJoyCenter() {
-    if (!joyBg) return;
+  function handleJoyStart(e) {
+    e.preventDefault();
+    joyActive = true;
     const rect = joyBg.getBoundingClientRect();
-    joyCenter.x = rect.left + rect.width / 2;
-    joyCenter.y = rect.top + rect.height / 2;
+    joyOrigin.x = rect.left + rect.width / 2;
+    joyOrigin.y = rect.top + rect.height / 2;
+    updateJoy(e);
   }
 
-  if (joyBg && joyStick) {
-    updateJoyCenter();
-    window.addEventListener('resize', updateJoyCenter);
-
-    function handleJoyStart(e) {
-      joyActive = true;
-      const p = e.touches ? e.touches[0] : e;
-      moveJoy(p.clientX, p.clientY);
-    }
-
-    function handleJoyMove(e) {
-      if (!joyActive) return;
-      const p = e.touches ? e.touches[0] : e;
-      moveJoy(p.clientX, p.clientY);
-    }
-
-    function handleJoyEnd() {
-      joyActive = false;
-      joyDX = 0;
-      joyDY = 0;
-      joyStick.style.transform = 'translate(0, 0)';
-    }
-
-    function moveJoy(x, y) {
-      const dx = x - joyCenter.x;
-      const dy = y - joyCenter.y;
-      const maxR = 40;
-      const dist = Math.min(Math.sqrt(dx * dx + dy * dy), maxR);
-      const ang = Math.atan2(dy, dx);
-      const nx = Math.cos(ang) * dist;
-      const ny = Math.sin(ang) * dist;
-
-      joyStick.style.transform = `translate(${nx}px, ${ny}px)`;
-
-      joyDX = nx / maxR;
-      joyDY = ny / maxR;
-    }
-
-    joyBg.addEventListener('pointerdown', handleJoyStart);
-    window.addEventListener('pointermove', handleJoyMove);
-    window.addEventListener('pointerup', handleJoyEnd);
-    joyBg.addEventListener('touchstart', handleJoyStart, { passive: true });
-    window.addEventListener('touchmove', handleJoyMove, { passive: true });
-    window.addEventListener('touchend', handleJoyEnd);
+  function handleJoyMove(e) {
+    if (!joyActive) return;
+    e.preventDefault();
+    updateJoy(e);
   }
 
-  // ---------- アバター移動 ----------
-  const avatarSpeed = 0.12;
-  function updateAvatarPosition() {
-    if (!currentAvatar) return;
-    if (!joyActive && Math.abs(joyDX) < 0.01 && Math.abs(joyDY) < 0.01) return;
-
-    // ジョイスティック：上＝前、左＝左
-    const forward = -joyDY;
-    const strafe = joyDX;
-
-    const sin = Math.sin(cameraYaw);
-    const cos = Math.cos(cameraYaw);
-
-    const moveX = (strafe * cos + forward * sin) * avatarSpeed;
-    const moveZ = (-strafe * sin + forward * cos) * avatarSpeed;
-
-    currentAvatar.position.x += moveX;
-    currentAvatar.position.z += moveZ;
-
-    const margin = 1.6;
-    const maxX = HALL_WIDTH / 2 - margin;
-    currentAvatar.position.x = Math.max(-maxX, Math.min(maxX, currentAvatar.position.x));
-
-    const minZ = 2;
-    const maxZ = HALL_LENGTH - 4;
-    currentAvatar.position.z = Math.max(minZ, Math.min(maxZ, currentAvatar.position.z));
+  function handleJoyEnd(e) {
+    if (!joyActive) return;
+    e.preventDefault();
+    joyActive = false;
+    joyVector.x = 0;
+    joyVector.y = 0;
+    joyStick.style.transform = 'translate(-50%, -50%)';
   }
+
+  function updateJoy(e) {
+    const point = getPoint(e);
+    const dx = point.x - joyOrigin.x;
+    const dy = point.y - joyOrigin.y;
+    const max = 40; // 半径
+    let nx = dx;
+    let ny = dy;
+    const dist = Math.sqrt(nx * nx + ny * ny);
+    if (dist > max) {
+      nx = (nx / dist) * max;
+      ny = (ny / dist) * max;
+    }
+    joyStick.style.transform =
+      'translate(calc(-50% + ' + nx + 'px), calc(-50% + ' + ny + 'px))';
+    joyVector.x = nx / max; // -1〜1
+    joyVector.y = ny / max;
+  }
+
+  function getPoint(e) {
+    if (e.touches && e.touches.length > 0) {
+      return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    } else {
+      return { x: e.clientX, y: e.clientY };
+    }
+  }
+
+  joyBg.addEventListener('pointerdown', handleJoyStart);
+  window.addEventListener('pointermove', handleJoyMove);
+  window.addEventListener('pointerup', handleJoyEnd);
+  joyBg.addEventListener('touchstart', handleJoyStart, { passive: false });
+  window.addEventListener('touchmove', handleJoyMove, { passive: false });
+  window.addEventListener('touchend', handleJoyEnd, { passive: false });
+
+  // ---------- カメラのドラッグ回転 ----------
+  let isDraggingCamera = false;
+  let lastX = 0;
+
+  canvas.addEventListener('pointerdown', (e) => {
+    // ジョイスティック上は除外
+    if (e.target === joyBg || e.target === joyStick) return;
+    isDraggingCamera = true;
+    lastX = e.clientX;
+  });
+
+  window.addEventListener('pointermove', (e) => {
+    if (!isDraggingCamera) return;
+    const dx = e.clientX - lastX;
+    lastX = e.clientX;
+    avatarYaw -= dx * 0.005; // 左右回転
+  });
+
+  window.addEventListener('pointerup', () => {
+    isDraggingCamera = false;
+  });
 
   // ---------- アバターチェンジ ----------
   const btnHuman = document.getElementById('btn-human');
   const btnDog = document.getElementById('btn-dog');
 
-  function setAvatarButtons(type) {
+  function setAvatarButtons() {
     if (!btnHuman || !btnDog) return;
-    if (type === 'human') {
+    if (avatarType === 'human') {
       btnHuman.classList.add('active');
       btnDog.classList.remove('active');
     } else {
-      btnHuman.classList.remove('active');
       btnDog.classList.add('active');
+      btnHuman.classList.remove('active');
     }
   }
 
-  if (btnHuman) {
+  if (btnHuman && btnDog) {
     btnHuman.addEventListener('click', () => {
-      currentHumanIndex = (currentHumanIndex + 1) % humans.length;
-      activateAvatar('human');
-      setAvatarButtons('human');
+      avatarType = 'human';
+      createAvatar('human');
+      setAvatarButtons();
     });
-  }
-
-  if (btnDog) {
     btnDog.addEventListener('click', () => {
-      currentDogIndex = (currentDogIndex + 1) % dogs.length;
-      activateAvatar('dog');
-      setAvatarButtons('dog');
+      avatarType = 'dog';
+      createAvatar('dog');
+      setAvatarButtons();
     });
   }
+  setAvatarButtons();
 
-  setAvatarButtons('human');
-
-  // ---------- 絵の拡大 ----------
-  let overlay = document.getElementById('info-panel');
-  if (!overlay) {
-    overlay = document.createElement('div');
-    overlay.id = 'info-panel';
-    document.body.appendChild(overlay);
-
-    const inner = document.createElement('div');
-    inner.id = 'info-inner';
-    overlay.appendChild(inner);
-
-    const closeBtn = document.createElement('button');
-    closeBtn.textContent = '×';
-    closeBtn.style.position = 'absolute';
-    closeBtn.style.right = '12px';
-    closeBtn.style.top = '6px';
-    closeBtn.style.border = 'none';
-    closeBtn.style.background = 'transparent';
-    closeBtn.style.color = '#fff';
-    closeBtn.style.fontSize = '24px';
-    closeBtn.style.cursor = 'pointer';
-    inner.appendChild(closeBtn);
-
-    const img = document.createElement('img');
-    img.id = 'info-image';
-    inner.appendChild(img);
-
-    const cap = document.createElement('div');
-    cap.id = 'info-caption';
-    inner.appendChild(cap);
-
-    closeBtn.addEventListener('click', () => { overlay.style.display = 'none'; });
-    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.style.display = 'none'; });
-  }
-
-  const infoImg = document.getElementById('info-image');
-  const infoCaption = document.getElementById('info-caption');
-
+  // ---------- クリックで絵を拡大表示 ----------
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
+  const infoPanel = document.getElementById('info-panel');
+  const infoImage = document.getElementById('info-image');
+  const infoTitle = document.getElementById('info-title');
+  const infoDesc = document.getElementById('info-desc');
+  const infoClose = document.getElementById('info-close');
 
-  function onCanvasTap(event) {
-    const rect = canvas.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-    pointer.set(x, y);
+  if (infoPanel && infoClose) {
+    infoPanel.style.display = 'none';
 
-    raycaster.setFromCamera(pointer, camera);
-    const intersects = raycaster.intersectObjects(clickablePaintings, false);
-    if (intersects.length > 0) {
-      const mesh = intersects[0].object;
-      const work = mesh.userData.work;
-      if (infoImg && infoCaption && overlay) {
-        infoImg.src = work.image;
-        infoCaption.textContent = work.title || '';
-        overlay.style.display = 'flex';
+    infoClose.addEventListener('click', () => {
+      infoPanel.style.display = 'none';
+    });
+
+    canvas.addEventListener('click', (event) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      pointer.set(x, y);
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObjects(clickablePaints, false);
+      if (hits.length > 0) {
+        const mesh = hits[0].object;
+        const work = mesh.userData.work;
+        if (work && infoImage && infoTitle && infoDesc) {
+          infoImage.src = work.image;
+          infoTitle.textContent = work.title;
+          infoDesc.textContent = work.description || '';
+          infoPanel.style.display = 'flex';
+        }
       }
+    });
+  }
+
+  // ---------- メインループ ----------
+  const clock = new THREE.Clock();
+
+  function animate() {
+    requestAnimationFrame(animate);
+
+    const dt = clock.getDelta();
+    updateAvatarMovement(dt);
+    updateCameraPosition();
+
+    renderer.render(scene, camera);
+  }
+
+  animate();
+
+  // ---------- 関数群 ----------
+
+  function buildCorridor() {
+    const floorGeo = new THREE.PlaneGeometry(
+      corridor.length,
+      corridor.halfWidth * 2
+    );
+    const floorMat = new THREE.MeshStandardMaterial({
+      color: 0x111111,
+      roughness: 0.9,
+      metalness: 0.0,
+    });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set(0, 0, corridor.length / 2);
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    const ceilGeo = new THREE.PlaneGeometry(
+      corridor.length,
+      corridor.halfWidth * 2
+    );
+    const ceilMat = new THREE.MeshStandardMaterial({
+      color: 0x050509,
+      roughness: 1.0,
+      metalness: 0.0,
+    });
+    const ceil = new THREE.Mesh(ceilGeo, ceilMat);
+    ceil.rotation.x = Math.PI / 2;
+    ceil.position.set(0, corridor.wallHeight, corridor.length / 2);
+    scene.add(ceil);
+
+    // 左右の壁
+    const wallGeo = new THREE.PlaneGeometry(
+      corridor.length,
+      corridor.wallHeight
+    );
+    const wallMat = new THREE.MeshStandardMaterial({
+      color: 0x303030,
+      roughness: 0.9,
+      metalness: 0.0,
+    });
+
+    const wallLeft = new THREE.Mesh(wallGeo, wallMat);
+    wallLeft.position.set(-corridor.halfWidth, corridor.wallHeight / 2, corridor.length / 2);
+    wallLeft.rotation.y = Math.PI / 2;
+    scene.add(wallLeft);
+
+    const wallRight = new THREE.Mesh(wallGeo, wallMat);
+    wallRight.position.set(corridor.halfWidth, corridor.wallHeight / 2, corridor.length / 2);
+    wallRight.rotation.y = -Math.PI / 2;
+    scene.add(wallRight);
+
+    // 天井のダウンライト（白い長方形）
+    const lightStripGeo = new THREE.PlaneGeometry(2, 0.25);
+    const lightStripMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const stripCount = 10;
+    for (let i = 0; i < stripCount; i++) {
+      const strip = new THREE.Mesh(lightStripGeo, lightStripMat);
+      const z = (corridor.length / (stripCount + 1)) * (i + 1);
+      strip.position.set(0, corridor.wallHeight - 0.1, z);
+      strip.rotation.x = Math.PI / 2;
+      scene.add(strip);
     }
   }
 
-  canvas.addEventListener('click', onCanvasTap);
+  function placePaintings() {
+    // 作品情報が無ければ終了
+    if (!window.WORKS || !Array.isArray(WORKS)) return;
 
-  // ---------- レンダリング ----------
+    const works = WORKS;
+    const total = works.length;
+    const spacing = corridor.length / (total / 2 + 2);
+    const frameHeight = 2.4;
+    const centerY = 2.6;
+
+    const frameDepth = 0.08;
+
+    for (let i = 0; i < total; i++) {
+      const work = works[i];
+
+      const isLeft = i < total / 2;
+      const indexInSide = isLeft ? i : i - total / 2;
+
+      const z =
+        spacing * (indexInSide + 1.5); // ちょっと入口から離す
+
+      const group = new THREE.Group();
+
+      const frameColor =
+        i % 3 === 0 ? 0x3a3a3a : i % 3 === 1 ? 0x91672c : 0x222222;
+
+      const frameGeo = new THREE.BoxGeometry(1.6, frameHeight, frameDepth);
+      const frameMat = new THREE.MeshStandardMaterial({
+        color: frameColor,
+        metalness: 0.3,
+        roughness: 0.5,
+      });
+      const frameMesh = new THREE.Mesh(frameGeo, frameMat);
+      frameMesh.castShadow = true;
+      frameMesh.receiveShadow = true;
+      group.add(frameMesh);
+
+      const imgGeo = new THREE.PlaneGeometry(1.4, frameHeight - 0.3);
+      const tex = textureLoader.load(work.image);
+      const imgMat = new THREE.MeshBasicMaterial({ map: tex });
+      const imgMesh = new THREE.Mesh(imgGeo, imgMat);
+      imgMesh.position.z = frameDepth / 2 + 0.005;
+      imgMesh.userData.work = work;
+      group.add(imgMesh);
+      clickablePaints.push(imgMesh);
+
+      // ピクチャライトっぽいスポット
+      const spotGeo = new THREE.ConeGeometry(0.18, 0.5, 16, 1, true);
+      const spotMat = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.25,
+        side: THREE.DoubleSide,
+      });
+      const spotMesh = new THREE.Mesh(spotGeo, spotMat);
+      spotMesh.position.set(0, frameHeight / 2 + 0.35, frameDepth * 0.25);
+      spotMesh.rotation.x = -Math.PI / 2.2;
+      group.add(spotMesh);
+
+      if (isLeft) {
+        group.position.set(
+          -corridor.halfWidth + 0.02,
+          centerY,
+          z
+        );
+        group.rotation.y = Math.PI / 2;
+      } else {
+        group.position.set(
+          corridor.halfWidth - 0.02,
+          centerY,
+          z
+        );
+        group.rotation.y = -Math.PI / 2;
+      }
+
+      scene.add(group);
+    }
+  }
+
+  function createAvatar(type) {
+    // 位置は保持
+    const currentPos = avatarGroup.position.clone();
+
+    // 既存メッシュ削除
+    while (avatarGroup.children.length > 0) {
+      const obj = avatarGroup.children.pop();
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) {
+        if (Array.isArray(obj.material)) {
+          obj.material.forEach((m) => m.dispose());
+        } else {
+          obj.material.dispose();
+        }
+      }
+    }
+
+    if (type === 'human') {
+      const cfg =
+        humanPresets[Math.floor(Math.random() * humanPresets.length)];
+
+      const bodyGeo = new THREE.CylinderGeometry(0.4, 0.5, 1.6, 16);
+      const bodyMat = new THREE.MeshStandardMaterial({
+        color: cfg.coat,
+        roughness: 0.6,
+        metalness: 0.1,
+      });
+      const body = new THREE.Mesh(bodyGeo, bodyMat);
+      body.position.y = 1.0;
+      avatarGroup.add(body);
+
+      const headGeo = new THREE.SphereGeometry(0.35, 24, 16);
+      const headMat = new THREE.MeshStandardMaterial({
+        color: cfg.skin,
+        roughness: 0.5,
+      });
+      const head = new THREE.Mesh(headGeo, headMat);
+      head.position.y = 1.9;
+      avatarGroup.add(head);
+
+      const hairGeo = new THREE.SphereGeometry(0.36, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+      const hairMat = new THREE.MeshStandardMaterial({
+        color: 0x111111,
+        roughness: 0.4,
+      });
+      const hair = new THREE.Mesh(hairGeo, hairMat);
+      hair.position.y = 2.0;
+      avatarGroup.add(hair);
+
+      const armGeo = new THREE.CylinderGeometry(0.12, 0.12, 1.1, 12);
+      const armMat = new THREE.MeshStandardMaterial({
+        color: cfg.coat,
+        roughness: 0.6,
+      });
+
+      const armL = new THREE.Mesh(armGeo, armMat);
+      armL.position.set(-0.55, 1.05, 0);
+      avatarGroup.add(armL);
+
+      const armR = armL.clone();
+      armR.position.x = 0.55;
+      avatarGroup.add(armR);
+
+      const legGeo = new THREE.CylinderGeometry(0.16, 0.18, 0.9, 12);
+      const legMat = new THREE.MeshStandardMaterial({
+        color: cfg.pants,
+        roughness: 0.7,
+      });
+
+      const legL = new THREE.Mesh(legGeo, legMat);
+      legL.position.set(-0.18, 0.45, 0);
+      avatarGroup.add(legL);
+
+      const legR = legL.clone();
+      legR.position.x = 0.18;
+      avatarGroup.add(legR);
+
+    } else {
+      const cfg = dogPresets[Math.floor(Math.random() * dogPresets.length)];
+
+      const bodyGeo = new THREE.BoxGeometry(1.1, 0.7, 1.6);
+      const bodyMat = new THREE.MeshStandardMaterial({
+        color: cfg.body,
+        roughness: 0.7,
+      });
+      const body = new THREE.Mesh(bodyGeo, bodyMat);
+      body.position.y = 0.6;
+      avatarGroup.add(body);
+
+      const headGeo = new THREE.BoxGeometry(0.8, 0.8, 0.9);
+      const headMat = new THREE.MeshStandardMaterial({
+        color: cfg.face,
+        roughness: 0.6,
+      });
+      const head = new THREE.Mesh(headGeo, headMat);
+      head.position.set(0, 1.1, 0.9);
+      avatarGroup.add(head);
+
+      const earGeo = new THREE.BoxGeometry(0.18, 0.45, 0.1);
+      const earMat = new THREE.MeshStandardMaterial({
+        color: cfg.body,
+        roughness: 0.7,
+      });
+      const earL = new THREE.Mesh(earGeo, earMat);
+      earL.position.set(-0.3, 1.4, 0.8);
+      avatarGroup.add(earL);
+      const earR = earL.clone();
+      earR.position.x = 0.3;
+      avatarGroup.add(earR);
+
+      const legGeo = new THREE.CylinderGeometry(0.13, 0.13, 0.55, 10);
+      const legMat = new THREE.MeshStandardMaterial({
+        color: cfg.body,
+        roughness: 0.8,
+      });
+      const legPositions = [
+        [-0.35, 0.3, 0.55],
+        [0.35, 0.3, 0.55],
+        [-0.35, 0.3, -0.55],
+        [0.35, 0.3, -0.55],
+      ];
+      for (const p of legPositions) {
+        const leg = new THREE.Mesh(legGeo, legMat);
+        leg.position.set(p[0], p[1], p[2]);
+        avatarGroup.add(leg);
+      }
+
+      const tailGeo = new THREE.CylinderGeometry(0.07, 0.07, 0.6, 8);
+      const tailMat = new THREE.MeshStandardMaterial({
+        color: cfg.body,
+        roughness: 0.7,
+      });
+      const tail = new THREE.Mesh(tailGeo, tailMat);
+      tail.position.set(0, 0.9, -0.9);
+      tail.rotation.x = Math.PI / 3;
+      avatarGroup.add(tail);
+    }
+
+    avatarGroup.position.copy(currentPos);
+  }
+
+  function updateAvatarMovement(dt) {
+    if (!dt) return;
+
+    const forward = -joyVector.y; // 上に倒すと前へ
+    const strafe = joyVector.x;   // 右に倒すと右へ
+
+    if (Math.abs(forward) < 0.02 && Math.abs(strafe) < 0.02) return;
+
+    const speed = 4.0 * dt; // dtに依存した速度
+    const sin = Math.sin(avatarYaw);
+    const cos = Math.cos(avatarYaw);
+
+    const dx = (forward * cos - strafe * sin) * speed;
+    const dz = (forward * sin + strafe * cos) * speed;
+
+    avatarGroup.position.x += dx;
+    avatarGroup.position.z += dz;
+
+    // 廊下内にクリップ
+    const margin = 1.0;
+    const minX = -corridor.halfWidth + margin;
+    const maxX = corridor.halfWidth - margin;
+    const minZ = 1.5;
+    const maxZ = corridor.length - 1.5;
+
+    avatarGroup.position.x = Math.max(minX, Math.min(maxX, avatarGroup.position.x));
+    avatarGroup.position.z = Math.max(minZ, Math.min(maxZ, avatarGroup.position.z));
+  }
+
+  function updateCameraPosition() {
+    // カメラをアバターの真後ろに固定
+    const offset = cameraBaseOffset.clone();
+    offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), avatarYaw);
+
+    const target = avatarGroup.position.clone();
+    const camPos = target.clone().add(offset);
+
+    camera.position.copy(camPos);
+    camera.lookAt(target.x, target.y + 1.5, target.z);
+  }
+
   function resizeRenderer() {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    renderer.setSize(w, h, false);
-    camera.aspect = w / h;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    renderer.setSize(width, height, false);
+    camera.aspect = width / height;
     camera.updateProjectionMatrix();
   }
 
   window.addEventListener('resize', resizeRenderer);
-  resizeRenderer();
-  updateCamera();
-
-  function animate() {
-    requestAnimationFrame(animate);
-    updateAvatarPosition();
-    updateCamera();
-    renderer.render(scene, camera);
-  }
-  animate();
 })();
