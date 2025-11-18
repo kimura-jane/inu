@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>TAF DOG MUSEUM</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div id="ui-top">
     <div id="museum-title">TAF DOG MUSEUM</div>
     <div id="avatar-ui">
       <span id="avatar-label">アバターチェンジ</span>
-      <button class="avatar-btn active" data-avatar="human">人間</button>
-      <button class="avatar-btn" data-avatar="dog">犬</button>
+      <button id="btn-human" class="avatar-btn active">人間</button>
+      <button id="btn-dog" class="avatar-btn">犬</button>
     </div>
   </div>
 
@@ -24,9 +24,9 @@
     </div>
   </div>
 
-  <!-- three.js -->
-  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-  <!-- TAF DOG の画像一覧。const WORKS = [...] が入っているファイル -->
+  <!-- three.js 本体 -->
+  <script src="https://unpkg.com/three@0.150.1/build/three.min.js"></script>
+  <!-- 作品データ -->
   <script src="data.js"></script>
   <!-- メインスクリプト -->
   <script src="app.js"></script>
