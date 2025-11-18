@@ -1,6 +1,4 @@
 // app.js : TAF DOG MUSEUM / 三人称視点 & アバターチェンジ & ジョイスティック
-// ======================================================================
-
 (function () {
   // ========== 基本セットアップ ==========
   const canvas = document.getElementById('scene');
@@ -23,15 +21,15 @@
 
   // プレイヤーの向き（ヨー）と視線の上下（ピッチ）
   let cameraYaw = 0;
-  let cameraPitch = 0;
+  let cameraPitch = -0.3; // 少し下向きにしておく
 
-  // プレイヤー（アバター）のワールド位置
-  const playerPos = new THREE.Vector3(0, 0, -6); // 廊下の入り口付近
+  // プレイヤー位置
+  const playerPos = new THREE.Vector3(0, 0, -10);
 
   // ========== ライティング ==========
   scene.add(new THREE.AmbientLight(0xffffff, 0.25));
 
-  const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
   dirLight.position.set(6, 10, 4);
   scene.add(dirLight);
 
@@ -63,13 +61,13 @@
   ceiling.position.set(0, wallHeight, -corridorHalf);
   scene.add(ceiling);
 
-  // 天井ラインライト風
+  // 天井ラインライトっぽい板
   const stripeGeo = new THREE.PlaneGeometry(1.2, 0.25);
   const stripeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   for (let i = 0; i < 14; i++) {
     const stripe = new THREE.Mesh(stripeGeo, stripeMat);
     stripe.rotation.x = Math.PI / 2;
-    stripe.position.set(0, wallHeight - 0.01, -6 - i * 5);
+    stripe.position.set(0, wallHeight - 0.01, -8 - i * 5);
     scene.add(stripe);
   }
 
@@ -137,7 +135,7 @@
     clickableMeshes.push(img);
 
     // ピクチャライト
-    const coneGeo = new THREE.ConeGeometry(0.11, 0.3, 18);
+    const coneGeo = new THREE.ConeGeometry(0.11, 0.3, 16);
     const coneMat = new THREE.MeshStandardMaterial({
       color: 0xe0e0ff,
       emissive: 0x7777aa,
@@ -145,12 +143,12 @@
       metalness: 0.1,
     });
     const cone = new THREE.Mesh(coneGeo, coneMat);
-    cone.rotation.x = -Math.PI / 2.4;
+    cone.rotation.x = -Math.PI / 2.3;
     cone.position.set(0, 1.2, 0.18);
     group.add(cone);
 
     const step = 3;
-    const z = -8 - index * step;
+    const z = -10 - index * step;
     const y = 1.8;
 
     if (side === 'right') {
@@ -182,7 +180,9 @@
       if (obj.material) {
         if (Array.isArray(obj.material)) {
           obj.material.forEach((m) => m.dispose && m.dispose());
-        } else obj.material.dispose();
+        } else {
+          obj.material.dispose && obj.material.dispose();
+        }
       }
     }
   }
@@ -236,26 +236,24 @@
     // 腕
     const armGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.9, 14);
     const armMat = bodyMat;
-    const leftArm = new THREE.Mesh(armGeo, armMat);
-    leftArm.position.set(-0.5, 1.0, 0);
-    leftArm.rotation.z = Math.PI / 14;
-    avatarGroup.add(leftArm);
-
-    const rightArm = leftArm.clone();
-    rightArm.position.x = 0.5;
-    rightArm.rotation.z = -Math.PI / 14;
-    avatarGroup.add(rightArm);
+    const armL = new THREE.Mesh(armGeo, armMat);
+    armL.position.set(-0.5, 1.0, 0);
+    armL.rotation.z = Math.PI / 18;
+    avatarGroup.add(armL);
+    const armR = armL.clone();
+    armR.position.x = 0.5;
+    armR.rotation.z = -Math.PI / 18;
+    avatarGroup.add(armR);
 
     // 足
     const legGeo = new THREE.CylinderGeometry(0.13, 0.13, 0.85, 14);
     const legMat = new THREE.MeshStandardMaterial({ color: legColor });
-    const leftLeg = new THREE.Mesh(legGeo, legMat);
-    leftLeg.position.set(-0.18, 0.35, 0);
-    avatarGroup.add(leftLeg);
-
-    const rightLeg = leftLeg.clone();
-    rightLeg.position.x = 0.18;
-    avatarGroup.add(rightLeg);
+    const legL = new THREE.Mesh(legGeo, legMat);
+    legL.position.set(-0.18, 0.35, 0);
+    avatarGroup.add(legL);
+    const legR = legL.clone();
+    legR.position.x = 0.18;
+    avatarGroup.add(legR);
   }
 
   function buildDog(styleIndex) {
@@ -326,35 +324,42 @@
   }
   updateAvatarTransform();
 
-  // ========== アバターチェンジボタン ==========
-  const avatarButtons = Array.from(
-    document.querySelectorAll('.avatar-btn')
-  );
+  // ========== アバターボタン ==========
+  const humanBtn = document.getElementById('btn-human');
+  const dogBtn = document.getElementById('btn-dog');
 
   function updateAvatarButtons() {
-    avatarButtons.forEach((btn) => {
-      const type = btn.dataset.type;
-      if (type === avatarMode) btn.classList.add('active');
-      else btn.classList.remove('active');
+    if (!humanBtn || !dogBtn) return;
+    if (avatarMode === 'human') {
+      humanBtn.classList.add('active');
+      dogBtn.classList.remove('active');
+    } else {
+      dogBtn.classList.add('active');
+      humanBtn.classList.remove('active');
+    }
+  }
+
+  if (humanBtn) {
+    humanBtn.addEventListener('click', () => {
+      avatarMode = 'human';
+      avatarStyleIndex = (avatarStyleIndex + 1) % 10;
+      buildHuman(avatarStyleIndex);
+      updateAvatarTransform();
+      updateAvatarButtons();
     });
   }
-  updateAvatarButtons();
 
-  avatarButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const type = btn.dataset.type;
-      if (!type) return;
-
-      avatarMode = type;
-      avatarStyleIndex = (avatarStyleIndex + 1) % 10; // 押すたびに服／犬の色だけ変化
-
-      if (avatarMode === 'human') buildHuman(avatarStyleIndex);
-      else buildDog(avatarStyleIndex);
-
-      updateAvatarButtons();
+  if (dogBtn) {
+    dogBtn.addEventListener('click', () => {
+      avatarMode = 'dog';
+      avatarStyleIndex = (avatarStyleIndex + 1) % 10;
+      buildDog(avatarStyleIndex);
       updateAvatarTransform();
+      updateAvatarButtons();
     });
-  });
+  }
+
+  updateAvatarButtons();
 
   // ========== カメラ操作（ドラッグで視点回転） ==========
   let isDragging = false;
@@ -364,7 +369,7 @@
   const joyBg = document.getElementById('joy-bg');
 
   canvas.addEventListener('pointerdown', (e) => {
-    // ジョイスティックエリアは除外
+    // ジョイスティックの円の上はドラッグ回転を無効化
     if (joyBg) {
       const r = joyBg.getBoundingClientRect();
       if (
@@ -376,18 +381,10 @@
         return;
       }
     }
-
     isDragging = true;
     lastX = e.clientX;
     lastY = e.clientY;
     canvas.setPointerCapture(e.pointerId);
-  });
-
-  canvas.addEventListener('pointerup', (e) => {
-    if (isDragging) {
-      isDragging = false;
-      canvas.releasePointerCapture(e.pointerId);
-    }
   });
 
   canvas.addEventListener('pointermove', (e) => {
@@ -401,16 +398,22 @@
     cameraPitch -= dy * 0.003;
 
     const maxPitch = Math.PI / 4;
-    const minPitch = -Math.PI / 6;
+    const minPitch = -Math.PI / 3;
     if (cameraPitch > maxPitch) cameraPitch = maxPitch;
     if (cameraPitch < minPitch) cameraPitch = minPitch;
+  });
+
+  canvas.addEventListener('pointerup', (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+    canvas.releasePointerCapture(e.pointerId);
   });
 
   // ========== ジョイスティック ==========
   const joyStick = document.getElementById('joy-stick');
   let joyActive = false;
   let joyCenter = { x: 0, y: 0 };
-  let joyVec = { x: 0, y: 0 }; // x:左右 / y:上下
+  let joyVec = { x: 0, y: 0 }; // x:左右, y:上下
 
   function updateJoyCenter() {
     if (!joyBg) return;
@@ -423,57 +426,47 @@
     joyActive = true;
     updateJoyCenter();
     moveJoy(e);
-    document.addEventListener('pointermove', moveJoy);
-    document.addEventListener('pointerup', endJoy);
-    document.addEventListener('touchmove', moveJoy, { passive: false });
-    document.addEventListener('touchend', endJoy);
-    if (e.cancelable) e.preventDefault();
+    window.addEventListener('pointermove', moveJoy);
+    window.addEventListener('pointerup', endJoy);
+    e.preventDefault();
   }
 
   function moveJoy(e) {
     if (!joyActive) return;
-    const p = e.touches ? e.touches[0] : e;
-    const dx = p.clientX - joyCenter.x;
-    const dy = p.clientY - joyCenter.y;
+    const dx = e.clientX - joyCenter.x;
+    const dy = e.clientY - joyCenter.y;
     const maxDist = 45;
 
-    let dist = Math.sqrt(dx * dx + dy * dy);
     let nx = dx;
     let ny = dy;
+    const dist = Math.hypot(dx, dy);
     if (dist > maxDist) {
       const ratio = maxDist / dist;
       nx *= ratio;
       ny *= ratio;
-      dist = maxDist;
     }
 
-    // -1〜1 に正規化（上下左右で速度差が出ないように）
     joyVec.x = nx / maxDist;
     joyVec.y = ny / maxDist;
 
     if (joyStick) {
       joyStick.style.transform = `translate(${nx}px, ${ny}px)`;
     }
-    if (e.cancelable) e.preventDefault();
   }
 
-  function endJoy(e) {
+  function endJoy() {
     joyActive = false;
     joyVec.x = 0;
     joyVec.y = 0;
-    if (joyStick) joyStick.style.transform = 'translate(0, 0)';
-    document.removeEventListener('pointermove', moveJoy);
-    document.removeEventListener('pointerup', endJoy);
-    document.removeEventListener('touchmove', moveJoy);
-    document.removeEventListener('touchend', endJoy);
-    if (e && e.cancelable) e.preventDefault();
+    if (joyStick) joyStick.style.transform = 'translate(0px, 0px)';
+    window.removeEventListener('pointermove', moveJoy);
+    window.removeEventListener('pointerup', endJoy);
   }
 
   if (joyBg && joyStick) {
-    window.addEventListener('resize', updateJoyCenter);
     updateJoyCenter();
     joyBg.addEventListener('pointerdown', startJoy);
-    joyBg.addEventListener('touchstart', startJoy, { passive: false });
+    window.addEventListener('resize', updateJoyCenter);
   }
 
   // ========== 作品タップで拡大 ==========
@@ -503,8 +496,9 @@
   function handleTap(e) {
     if (!clickableMeshes.length) return;
     const rect = canvas.getBoundingClientRect();
-    const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
-    const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+    const clientX = e.clientX ?? (e.changedTouches && e.changedTouches[0].clientX);
+    const clientY = e.clientY ?? (e.changedTouches && e.changedTouches[0].clientY);
+    if (clientX == null || clientY == null) return;
 
     pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
     pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
@@ -518,7 +512,6 @@
   }
 
   canvas.addEventListener('click', handleTap);
-  canvas.addEventListener('touchend', handleTap);
 
   // ========== レイアウト ==========
   function resizeRenderer() {
@@ -528,18 +521,15 @@
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
   }
-  window.addEventListener('resize', () => {
-    resizeRenderer();
-    updateJoyCenter();
-  });
+  window.addEventListener('resize', resizeRenderer);
   resizeRenderer();
 
-  // ========== プレイヤー移動の制限 ==========
+  // ========== プレイヤー移動制限 ==========
   function clampPlayer() {
     const margin = 1.0;
     const maxX = corridorWidth / 2 - margin;
     const minX = -maxX;
-    const nearZ = -3;
+    const nearZ = -6;
     const farZ = -corridorLength + 8;
 
     if (playerPos.x > maxX) playerPos.x = maxX;
@@ -556,15 +546,14 @@
     const dt = clock.getDelta();
 
     // ジョイスティックで移動
-    if (Math.abs(joyVec.x) > 0.01 || Math.abs(joyVec.y) > 0.01) {
+    if (Math.abs(joyVec.x) > 0.02 || Math.abs(joyVec.y) > 0.02) {
       const moveSpeed = 4.0;
       const forwardInput = -joyVec.y; // 上で前進
       const sideInput = joyVec.x;
 
-      // 斜めの時も速度一定にする
-      let len = Math.hypot(forwardInput, sideInput);
       let f = forwardInput;
       let s = sideInput;
+      const len = Math.hypot(f, s);
       if (len > 1) {
         f /= len;
         s /= len;
@@ -586,10 +575,10 @@
       updateAvatarTransform();
     }
 
-    // カメラ位置をプレイヤーの「真後ろ＋少し上」に置く
-    const target = playerPos.clone().add(new THREE.Vector3(0, 1.4, 0)); // 頭あたり
+    // カメラ位置をプレイヤー後方に置く
+    const targetHeight = avatarMode === 'human' ? 1.5 : 1.0;
+    const target = playerPos.clone().add(new THREE.Vector3(0, targetHeight, 0));
 
-    // カメラのオフセット（ローカル座標で後ろに 3.5、上に 1.6）
     let offset = new THREE.Vector3(0, 1.6, 3.5);
     const rotY = new THREE.Matrix4().makeRotationY(cameraYaw);
     offset.applyMatrix4(rotY);
@@ -597,15 +586,12 @@
     const camPos = target.clone().add(offset);
     camera.position.copy(camPos);
 
-    // ピッチ分だけ上下に振る
+    // 視線方向
     const lookDir = new THREE.Vector3(
       Math.sin(cameraYaw),
-      0,
+      Math.sin(cameraPitch),
       -Math.cos(cameraYaw)
-    );
-    // ピッチを反映
-    lookDir.y = Math.sin(cameraPitch);
-    lookDir.normalize();
+    ).normalize();
 
     const lookTarget = camera.position.clone().add(lookDir);
     camera.lookAt(lookTarget);
