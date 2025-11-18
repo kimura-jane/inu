@@ -3,21 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <title>TAF DOG MUSEUM</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- 上部UI -->
-  <header id="ui-top">
+  <div id="top-bar">
     <div id="logo">TAF DOG MUSEUM</div>
     <div id="avatar-ui">
       <span id="avatar-label">アバターチェンジ</span>
-      <button class="avatar-btn active" data-type="human">人間</button>
-      <button class="avatar-btn" data-type="dog">犬</button>
+      <button id="btn-human" class="avatar-btn active">人間</button>
+      <button id="btn-dog" class="avatar-btn">犬</button>
     </div>
-  </header>
+  </div>
 
-  <!-- 3Dシーン -->
   <canvas id="scene"></canvas>
 
   <!-- ジョイスティック -->
@@ -27,17 +25,8 @@
     </div>
   </div>
 
-  <!-- 作品拡大パネル -->
-  <div id="info-panel" class="hidden">
-    <div id="info-inner">
-      <button id="info-close">×</button>
-      <div id="info-title"></div>
-      <img id="info-image" alt="" />
-    </div>
-  </div>
-
-  <!-- Three.js とデータ & スクリプト -->
-  <script src="https://unpkg.com/three@0.161.0/build/three.min.js"></script>
+  <!-- Three.js とアプリ本体 -->
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
   <script src="data.js"></script>
   <script src="app.js"></script>
 </body>
