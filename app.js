@@ -12,6 +12,13 @@ let joyVec = { x: 0, y: 0 };
 
 const ROOM_SIZE = 1600;
 
+// data.js がなくても落ちないようにする
+const worksData = Array.isArray(window.WORKS) ? window.WORKS : [];
+
+const clickableObjects = [];
+let raycaster = new THREE.Raycaster();
+let pointer = new THREE.Vector2();
+
 // ====== 初期化 ======
 init();
 animate();
@@ -29,7 +36,12 @@ function init() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x050509);
 
-  camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 5000);
+  camera = new THREE.PerspectiveCamera(
+    55,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    5000
+  );
 
   // ライト
   const hemi = new THREE.HemisphereLight(0xffffff, 0x222233, 0.8);
@@ -39,10 +51,8 @@ function init() {
   dir.position.set(800, 1200, 400);
   scene.add(dir);
 
-  // 白いギャラリー部屋
+  // 部屋と絵
   createGalleryRoom();
-
-  // 額＋絵
   createArtworks();
 
   // アバター
@@ -50,11 +60,10 @@ function init() {
   scene.add(avatar);
   avatarType = "human";
 
-  // カメラ初期位置
   avatar.position.set(0, 0, 400);
-  yaw = Math.PI; // 部屋の内側を向かせる
+  yaw = Math.PI; // 中央の壁側を見る
 
-  // UI イベント
+  // UI
   setupJoystick();
   setupViewDrag();
   setupAvatarButtons();
@@ -130,7 +139,7 @@ function createGalleryRoom() {
 
   scene.add(room);
 
-  // 天井スポットライト
+  // 天井ライト列
   const spotRow = 7;
   const gap = ROOM_SIZE / (spotRow + 1);
   for (let i = 0; i < spotRow; i++) {
@@ -145,9 +154,12 @@ function createGalleryRoom() {
 
 // ====== 絵と額 ======
 function createArtworks() {
-  if (!Array.isArray(WORKS)) return;
+  if (!Array.isArray(worksData) || worksData.length === 0) {
+    // data.jsが読めてなくても部屋だけは表示したい
+    return;
+  }
 
-  const count = WORKS.length;
+  const count = worksData.length;
   const perWall = Math.ceil(count / 4);
   const startY = 260;
 
@@ -158,8 +170,10 @@ function createArtworks() {
     { color: 0x3a3a3a, depth: 20 }
   ];
 
+  const texLoader = new THREE.TextureLoader();
+
   for (let i = 0; i < count; i++) {
-    const work = WORKS[i];
+    const work = worksData[i];
     const wallIndex = Math.floor(i / perWall);
     const indexOnWall = i % perWall;
 
@@ -211,10 +225,8 @@ function createArtworks() {
     canvas.position.z = frameSetting.depth / 2 + 0.1;
     group.add(canvas);
 
-    // テクスチャ
-    const texLoader = new THREE.TextureLoader();
     texLoader.load(work.image, (tex) => {
-      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.colorSpace = THREE.SRGBColorSpace || THREE.sRGBEncoding;
       canvas.material.map = tex;
       canvas.material.needsUpdate = true;
     });
@@ -452,10 +464,6 @@ function setupViewDrag() {
 }
 
 // ====== 画像クリック拡大 ======
-const clickableObjects = [];
-let raycaster = new THREE.Raycaster();
-let pointer = new THREE.Vector2();
-
 function setupModal() {
   const overlay = document.createElement("div");
   overlay.id = "modal-overlay";
@@ -467,13 +475,14 @@ function setupModal() {
   });
 
   const canvas = document.getElementById("scene");
+
   const showModal = (work) => {
     const img = overlay.querySelector("img");
     img.src = work.image;
     overlay.classList.add("active");
   };
 
-  const handleClick = (event) => {
+  canvas.addEventListener("click", (event) => {
     const rect = canvas.getBoundingClientRect();
     const p = getPoint(event);
     pointer.x = ((p.x - rect.left) / rect.width) * 2 - 1;
@@ -490,9 +499,7 @@ function setupModal() {
         showModal(obj.userData.work);
       }
     }
-  };
-
-  canvas.addEventListener("click", handleClick);
+  });
 }
 
 // ====== レンダリング ======
@@ -510,11 +517,7 @@ function animate() {
     avatar.position.x += sin * forward + cos * strafe;
     avatar.position.z += cos * forward - sin * strafe;
 
-    if (avatarType === "human") {
-      avatar.position.y = 0;
-    } else {
-      avatar.position.y = 0;
-    }
+    avatar.position.y = 0;
 
     const camOffset = new THREE.Vector3(0, 180, 260);
     const rotMat = new THREE.Matrix4().makeRotationY(yaw);
@@ -536,6 +539,7 @@ function animate() {
 function resizeRenderer() {
   const width = window.innerWidth;
   const height = window.innerHeight;
+  if (!renderer) return;
   renderer.setSize(width, height, false);
   if (camera) {
     camera.aspect = width / height;
