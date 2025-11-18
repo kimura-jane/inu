@@ -2,25 +2,22 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>TAF DOG MUSEUM</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <!-- 上部UI -->
   <div id="ui-top">
     <div id="museum-title">TAF DOG MUSEUM</div>
-    <div id="museum-sub"></div>
+    <div id="avatar-ui">
+      <span id="avatar-label">アバターチェンジ</span>
+      <button id="btn-human" class="avatar-btn active">人間</button>
+      <button id="btn-dog" class="avatar-btn">犬</button>
+    </div>
   </div>
 
-  <!-- アバター切り替え UI -->
-  <div id="avatar-ui">
-    <span id="avatar-label">アバターチェンジ</span>
-    <button id="btn-human" class="avatar-mode-btn active">人間</button>
-    <button id="btn-dog" class="avatar-mode-btn">犬</button>
-  </div>
-
-  <!-- Three.js キャンバス -->
+  <!-- three.js キャンバス -->
   <canvas id="scene"></canvas>
 
   <!-- ジョイスティック -->
@@ -31,16 +28,18 @@
   </div>
 
   <!-- 作品情報パネル -->
-  <div id="info-panel" class="hidden">
+  <div id="info-panel">
     <div id="info-inner">
-      <div id="info-title"></div>
-      <div id="info-desc"></div>
-      <button id="info-close">閉じる</button>
+      <button id="info-close">×</button>
+      <h2 id="info-title"></h2>
+      <img id="info-image" alt="" />
+      <p id="info-desc"></p>
     </div>
   </div>
 
-  <!-- Three.js & アプリ本体 -->
-  <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+  <!-- three.js本体 → data.js → app.js の順で読み込み -->
+  <script src="https://unpkg.com/three@0.162.0/build/three.min.js"></script>
+  <!-- 作品リストがあるなら data.js をここで読み込む -->
   <script src="data.js"></script>
   <script src="app.js"></script>
 </body>
