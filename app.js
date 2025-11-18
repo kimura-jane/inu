@@ -1,10 +1,16 @@
 // ====== グローバル ======
 let scene, camera, renderer;
 let avatar, avatarType = "human";
-let yaw = 0;
+
+// カメラ角度
+let yaw = Math.PI;     // 左右（初期は後ろから正面を見る）
+let pitch = -0.15;     // 上下
+
 let isDraggingView = false;
 let dragStartX = 0;
+let dragStartY = 0;
 let dragStartYaw = 0;
+let dragStartPitch = 0;
 
 let joyActive = false;
 let joyCenter = { x: 0, y: 0 };
@@ -61,7 +67,6 @@ function init() {
   avatarType = "human";
 
   avatar.position.set(0, 0, 400);
-  yaw = Math.PI; // 中央の壁側を見る
 
   // UI
   setupJoystick();
@@ -155,7 +160,6 @@ function createGalleryRoom() {
 // ====== 絵と額 ======
 function createArtworks() {
   if (!Array.isArray(worksData) || worksData.length === 0) {
-    // data.jsが読めてなくても部屋だけは表示したい
     return;
   }
 
@@ -431,7 +435,7 @@ function getPoint(e) {
   return { x: e.clientX, y: e.clientY };
 }
 
-// ====== 視線ドラッグ ======
+// ====== 視線ドラッグ（左右＋上下） ======
 function setupViewDrag() {
   const canvas = document.getElementById("scene");
   const joy = document.getElementById("joy-bg");
@@ -440,17 +444,31 @@ function setupViewDrag() {
     if (e.target === joy || joy.contains(e.target)) return;
     e.preventDefault();
     isDraggingView = true;
-    dragStartX = getPoint(e).x;
+    const p = getPoint(e);
+    dragStartX = p.x;
+    dragStartY = p.y;
     dragStartYaw = yaw;
+    dragStartPitch = pitch;
   };
 
   const onMove = (e) => {
     if (!isDraggingView) return;
     e.preventDefault();
-    const x = getPoint(e).x;
-    const dx = x - dragStartX;
-    const rotSpeed = 0.005;
-    yaw = dragStartYaw - dx * rotSpeed;
+    const p = getPoint(e);
+    const dx = p.x - dragStartX;
+    const dy = p.y - dragStartY;
+
+    const rotSpeedX = 0.005;  // 左右
+    const rotSpeedY = 0.004;  // 上下
+
+    yaw = dragStartYaw - dx * rotSpeedX;
+    pitch = dragStartPitch - dy * rotSpeedY;
+
+    // 上下の角度を制限
+    const minPitch = -0.6; // 下を向きすぎない
+    const maxPitch = 0.4;  // 上を向きすぎない
+    if (pitch < minPitch) pitch = minPitch;
+    if (pitch > maxPitch) pitch = maxPitch;
   };
 
   const onUp = () => {
@@ -516,19 +534,20 @@ function animate() {
 
     avatar.position.x += sin * forward + cos * strafe;
     avatar.position.z += cos * forward - sin * strafe;
-
     avatar.position.y = 0;
 
-    const camOffset = new THREE.Vector3(0, 180, 260);
-    const rotMat = new THREE.Matrix4().makeRotationY(yaw);
-    camOffset.applyMatrix4(rotMat);
+    // カメラ位置：アバターの後ろ・少し上・少し離す
+    let offset = new THREE.Vector3(0, 220, 520);
 
-    camera.position.copy(avatar.position).add(camOffset);
-    camera.lookAt(
-      avatar.position.x,
-      avatar.position.y + (avatarType === "human" ? 160 : 80),
-      avatar.position.z
-    );
+    // まず上下（X軸）を回転、そのあと左右（Y軸）
+    offset.applyAxisAngle(new THREE.Vector3(1, 0, 0), pitch);
+    offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+
+    camera.position.copy(avatar.position).add(offset);
+
+    const target = avatar.position.clone();
+    target.y += (avatarType === "human" ? 150 : 80);
+    camera.lookAt(target);
 
     avatar.rotation.y = yaw;
   }
