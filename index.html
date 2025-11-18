@@ -13,13 +13,14 @@
     <div id="museum-sub">ドラッグで見回す / ジョイスティックで歩く / タップで拡大</div>
   </div>
 
-  <!-- アバター切り替え -->
+  <!-- アバターチェンジ -->
   <div id="avatar-switcher">
+    <span id="avatar-label">アバターチェンジ</span>
     <button id="btn-human" class="avatar-btn active">人間</button>
     <button id="btn-dog" class="avatar-btn">犬</button>
   </div>
 
-  <!-- 3D表示用キャンバス -->
+  <!-- 3Dキャンバス -->
   <canvas id="scene"></canvas>
 
   <!-- ジョイスティック -->
@@ -41,9 +42,7 @@
 
   <!-- Three.js & アプリ -->
   <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-  <!-- 画像リスト（WORKS 配列） -->
   <script src="data.js"></script>
-  <!-- メインロジック -->
   <script src="app.js"></script>
 </body>
 </html>
