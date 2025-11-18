@@ -1,143 +1,117 @@
-/* 全体 */
-html, body {
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #050507;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
-  color: #fff;
+  background: #050509;
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", system-ui, sans-serif;
 }
 
-/* Three.js キャンバス */
+/* キャンバス全画面 */
 #scene {
   position: fixed;
   inset: 0;
   display: block;
 }
 
-/* 上部タイトル */
+/* 上部 UI */
 #ui-top {
   position: fixed;
-  top: 16px;
-  left: 16px;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 16px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   z-index: 10;
   pointer-events: none;
 }
 
 #museum-title {
-  letter-spacing: 0.25em;
-  font-size: 14px;
+  letter-spacing: 0.16em;
+  font-size: 13px;
+  font-weight: 500;
+  pointer-events: auto;
 }
 
-#museum-sub {
-  margin-top: 4px;
-  font-size: 11px;
-  opacity: 0.8;
-}
-
-/* アバターUI */
 #avatar-ui {
-  position: fixed;
-  top: 16px;
-  right: 16px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  z-index: 10;
+  gap: 6px;
+  pointer-events: auto;
+  font-size: 12px;
 }
 
 #avatar-label {
-  font-size: 11px;
-  opacity: 0.9;
+  opacity: 0.8;
 }
 
-.avatar-mode-btn {
-  border: none;
+/* アバターボタン */
+.avatar-btn {
   border-radius: 999px;
-  padding: 6px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: transparent;
+  color: #ffffff;
+  padding: 4px 14px;
   font-size: 12px;
-  background: rgba(255,255,255,0.1);
-  color: #fff;
+  line-height: 1.4;
+  cursor: pointer;
+  outline: none;
 }
 
-.avatar-mode-btn.active {
-  background: #fff;
-  color: #000;
+.avatar-btn.active {
+  background: #ffffff;
+  color: #000000;
 }
 
 /* ジョイスティック */
 #joy-container {
   position: fixed;
-  bottom: 32px;
+  bottom: 28px;
   left: 50%;
   transform: translateX(-50%);
-  width: 120px;
-  height: 120px;
-  z-index: 10;
-  touch-action: none;
-}
-
-#joy-bg {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, #333, #000);
+  width: 140px;
+  height: 140px;
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 10;
+}
+
+#joy-bg {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
 }
 
 #joy-stick {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: #f5f5f5;
+  background: #f4f4f4;
+  touch-action: none;
+  transform: translate3d(0, 0, 0);
+  transition: transform 0.06s ease-out;
 }
 
-/* 作品情報パネル */
-#info-panel {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.65);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 20;
-}
-
-#info-panel.hidden {
-  display: none;
-}
-
-#info-inner {
-  background: #111217;
-  border-radius: 12px;
-  padding: 16px 18px;
-  width: min(320px, 90vw);
-  box-shadow: 0 12px 30px rgba(0,0,0,0.6);
-}
-
-#info-title {
-  font-size: 15px;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-
-#info-desc {
-  font-size: 12px;
-  line-height: 1.6;
-  opacity: 0.9;
-  margin-bottom: 12px;
-}
-
-#info-close {
-  width: 100%;
-  border-radius: 999px;
-  border: none;
-  padding: 8px 0;
-  font-size: 13px;
-  background: #fff;
-  color: #000;
+/* iOS のスクロール挙動対策 */
+body {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
