@@ -63,31 +63,32 @@
     ceil.position.y = ROOM_HEIGHT;
     scene.add(ceil);
 
-    // 壁マテリアル
+    // 壁
     const wallMat = new THREE.MeshPhongMaterial({ color: 0xe5e5e8 });
-
     const wallGeoW = new THREE.PlaneGeometry(ROOM_WIDTH, ROOM_HEIGHT);
     const wallGeoD = new THREE.PlaneGeometry(ROOM_DEPTH, ROOM_HEIGHT);
 
-    // 前後の壁
+    // 前（z マイナス側）
     const wallFront = new THREE.Mesh(wallGeoW, wallMat);
     wallFront.position.set(0, ROOM_HEIGHT / 2, -ROOM_DEPTH / 2);
     wallFront.receiveShadow = true;
     scene.add(wallFront);
 
+    // 後ろ（z プラス側）
     const wallBack = new THREE.Mesh(wallGeoW, wallMat);
     wallBack.position.set(0, ROOM_HEIGHT / 2, ROOM_DEPTH / 2);
     wallBack.rotation.y = Math.PI;
     wallBack.receiveShadow = true;
     scene.add(wallBack);
 
-    // 左右の壁
+    // 左（x マイナス側）
     const wallLeft = new THREE.Mesh(wallGeoD, wallMat);
     wallLeft.position.set(-ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0);
     wallLeft.rotation.y = Math.PI / 2;
     wallLeft.receiveShadow = true;
     scene.add(wallLeft);
 
+    // 右（x プラス側）
     const wallRight = new THREE.Mesh(wallGeoD, wallMat);
     wallRight.position.set(ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0);
     wallRight.rotation.y = -Math.PI / 2;
@@ -97,7 +98,7 @@
 
   createRoom();
 
-  // ====== アートフレーム配置 ======
+  // ====== アートフレーム ======
   const textureLoader = new THREE.TextureLoader();
 
   function createFrame(texture, position, rotationY) {
@@ -105,7 +106,6 @@
     const frameHeight = 2.6;
     const frameDepth = 0.1;
 
-    // 前面テクスチャ
     texture.minFilter = THREE.LinearFilter;
     texture.magFilter = THREE.LinearFilter;
     texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -162,37 +162,41 @@
     const sideStep = perWall > 1 ? sideLen / (perWall - 1) : 0;
 
     WORKS.forEach((work, i) => {
+      // データ側のプロパティ名の違いに対応
+      const imgPath =
+        work.img || work.image || work.src || work.url || work.path;
+      if (!imgPath) return;
+
       const wallIndex = Math.floor(i / perWall); // 0〜3
       const indexOnWall = i % perWall;
 
+      const h = 2.0;
       let pos = new THREE.Vector3();
       let rotY = 0;
 
-      const h = 2.0; // 絵の高さ位置
-
       switch (wallIndex) {
-        // 前の壁（z マイナス側）: 絵は +z を向く
+        // 前の壁（z マイナス）: 正面を +z 向き
         case 0: {
           const startX = -frontLen / 2;
           pos.set(startX + frontStep * indexOnWall, h, frontZ);
           rotY = 0;
           break;
         }
-        // 右の壁（x プラス側）: 絵は -x を向く
+        // 右の壁（x プラス）: 正面を -x 向き
         case 1: {
           const startZ = -sideLen / 2;
           pos.set(rightX, h, startZ + sideStep * indexOnWall);
           rotY = -Math.PI / 2;
           break;
         }
-        // 後ろの壁（z プラス側）: 絵は -z を向く
+        // 後ろの壁（z プラス）: 正面を -z 向き
         case 2: {
           const startX = frontLen / 2;
           pos.set(startX - frontStep * indexOnWall, h, backZ);
           rotY = Math.PI;
           break;
         }
-        // 左の壁（x マイナス側）: 絵は +x を向く
+        // 左の壁（x マイナス）: 正面を +x 向き
         default: {
           const startZ = sideLen / 2;
           pos.set(leftX, h, startZ - sideStep * indexOnWall);
@@ -201,9 +205,16 @@
         }
       }
 
-      textureLoader.load(work.img, (tex) => {
-        createFrame(tex, pos, rotY);
-      });
+      textureLoader.load(
+        imgPath,
+        (tex) => createFrame(tex, pos, rotY),
+        undefined,
+        () => {
+          // 読み込み失敗時も黒いフレームだけ出す
+          const dummy = new THREE.Texture();
+          createFrame(dummy, pos, rotY);
+        }
+      );
     });
   }
 
@@ -220,8 +231,8 @@
       if (obj.isMesh) {
         obj.geometry.dispose();
         if (Array.isArray(obj.material)) {
-          obj.material.forEach((m) => m.dispose());
-        } else {
+          obj.material.forEach((m) => m.dispose && m.dispose());
+        } else if (obj.material && obj.material.dispose) {
           obj.material.dispose();
         }
       }
@@ -249,7 +260,6 @@
     head.position.y = 2.1;
     group.add(head);
 
-    // 足（シンプルに）
     const footGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.2, 16);
     const footMat = new THREE.MeshPhongMaterial({ color: 0x222222 });
 
@@ -264,7 +274,7 @@
     group.add(rightFoot);
 
     group.position.set(0, 0, 4);
-    group.rotation.y = Math.PI; // 初期は絵の方を見る
+    group.rotation.y = Math.PI; // 絵の方を見る
 
     return group;
   }
@@ -314,14 +324,14 @@
     });
 
     group.position.set(0, 0, 4);
-    group.rotation.y = Math.PI; // 絵の方を見る
+    group.rotation.y = Math.PI;
 
     return group;
   }
 
   function getCameraOffset() {
     if (avatarType === 'dog') {
-      return new THREE.Vector3(0, 1.4, 4); // ちょい低め
+      return new THREE.Vector3(0, 1.4, 4.0);
     }
     return new THREE.Vector3(0, 2.0, 4.5);
   }
@@ -329,7 +339,7 @@
   function setAvatar(type) {
     avatarType = type;
     clearAvatar();
-    avatarGroup = (type === 'dog') ? createDogAvatar() : createHumanAvatar();
+    avatarGroup = type === 'dog' ? createDogAvatar() : createHumanAvatar();
     scene.add(avatarGroup);
     updateAvatarButtons();
   }
@@ -349,17 +359,13 @@
     }
   }
 
-  if (btnHuman) {
-    btnHuman.addEventListener('click', () => setAvatar('human'));
-  }
-  if (btnDog) {
-    btnDog.addEventListener('click', () => setAvatar('dog'));
-  }
+  if (btnHuman) btnHuman.addEventListener('click', () => setAvatar('human'));
+  if (btnDog) btnDog.addEventListener('click', () => setAvatar('dog'));
 
-  // 最初は人間
+  // 初期アバター
   setAvatar('human');
 
-  // ====== カメラ追従 & 視線ドラッグ ======
+  // ====== 視線ドラッグ ======
   let isDraggingView = false;
   let lastPointerX = 0;
 
@@ -474,29 +480,27 @@
   function updateMovement(delta) {
     if (!avatarGroup) return;
 
-    const speed = 4.0; // m/s
+    const speed = 4.0;
 
-    // joyVector.y: 上にドラッグすると負 → 「前進」にしたいので -joyVector.y
-    const forward = -joyVector.y; // 前(+) / 後(-)
-    const strafe = joyVector.x;   // 右(+) / 左(-)
+    // 前後：上ドラッグで前進（-y が前）
+    const forward = -joyVector.y;
+    // 左右：右ドラッグで右に動く
+    const strafe = joyVector.x;
 
     if (Math.abs(forward) < 0.01 && Math.abs(strafe) < 0.01) return;
 
     const yaw = avatarGroup.rotation.y;
-
     const cos = Math.cos(yaw);
     const sin = Math.sin(yaw);
 
-    // ローカル→ワールド変換
-    const dx =
-      (strafe * cos + forward * sin) * speed * delta;
-    const dz =
-      (strafe * -sin + forward * cos) * speed * delta;
+    // ローカル(右=+x, 前=+z) → ワールド
+    const worldX = strafe * cos - forward * sin;
+    const worldZ = strafe * sin + forward * cos;
 
-    avatarGroup.position.x += dx;
-    avatarGroup.position.z += dz;
+    avatarGroup.position.x += worldX * speed * delta;
+    avatarGroup.position.z += worldZ * speed * delta;
 
-    // 壁の外に出ないようクリップ
+    // ルーム外に出ないよう制限
     const margin = 1.5;
     const limitX = ROOM_WIDTH / 2 - margin;
     const limitZ = ROOM_DEPTH / 2 - margin;
@@ -520,8 +524,8 @@
     const cos = Math.cos(yaw);
     const sin = Math.sin(yaw);
 
-    const ox = offset.x * cos + offset.z * sin;
-    const oz = offset.z * cos - offset.x * sin;
+    const ox = offset.x * cos - offset.z * sin;
+    const oz = offset.x * sin + offset.z * cos;
 
     camera.position.set(
       avatarGroup.position.x - ox,
