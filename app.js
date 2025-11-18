@@ -1,10 +1,10 @@
-// app.js : TAF DOG MUSEUM（視点 & 壁貼り付け 修正版）
+// app.js : TAF DOG MUSEUM（第三者視点 & 額装修正版）
 // 依存 : three.js, data.js (const WORKS = [...])
 
 (function () {
-  // --------------------------------
+  // -----------------------------
   // 基本セットアップ
-  // --------------------------------
+  // -----------------------------
   const canvas = document.getElementById('scene');
   if (!canvas) return;
 
@@ -24,24 +24,22 @@
     0.1,
     200
   );
-
-  // 後で updateCameraImmediate で位置決めする
-  camera.position.set(0, 4, -10);
+  camera.position.set(0, 5, -15);
 
   const ambient = new THREE.AmbientLight(0xffffff, 0.45);
   scene.add(ambient);
 
   const dirLight = new THREE.DirectionalLight(0xffffff, 0.55);
-  dirLight.position.set(3, 5, 4);
+  dirLight.position.set(4, 6, 3);
   scene.add(dirLight);
 
-  // --------------------------------
+  // -----------------------------
   // 美術館空間
-  // --------------------------------
+  // -----------------------------
   const hallLength = 80;
   const hallWidth = 10;
   const wallHeight = 5;
-  const FRAME_DEPTH = 0.04; // 額縁の厚み（壁にほぼ貼り付け）
+  const FRAME_DEPTH = 0.05; // 額縁の厚み
 
   const texLoader = new THREE.TextureLoader();
 
@@ -76,17 +74,19 @@
     roughness: 0.85,
   });
 
+  // 左壁
   const wallLeft = new THREE.Mesh(wallGeo, wallMat);
   wallLeft.position.set(0, wallHeight / 2, -hallWidth / 2);
   wallLeft.rotation.y = Math.PI / 2;
   scene.add(wallLeft);
 
+  // 右壁
   const wallRight = new THREE.Mesh(wallGeo, wallMat);
   wallRight.position.set(0, wallHeight / 2, hallWidth / 2);
   wallRight.rotation.y = -Math.PI / 2;
   scene.add(wallRight);
 
-  // 天井ライト（ライン）
+  // 天井ラインライト
   const ceilingLights = new THREE.Group();
   const lightCount = 12;
   for (let i = 0; i < lightCount; i++) {
@@ -103,15 +103,14 @@
   }
   scene.add(ceilingLights);
 
-  // --------------------------------
-  // 額縁＋スポットライト
-  // --------------------------------
+  // -----------------------------
+  // 額縁 + スポットライト
+  // -----------------------------
   const clickableMeshes = [];
   const frameGroup = new THREE.Group();
   scene.add(frameGroup);
 
   function createFrameMesh(width, height, variant) {
-    // 厚みを薄くして壁にほぼ密着
     const frameGeo = new THREE.BoxGeometry(
       width + 0.6,
       height + 0.6,
@@ -131,7 +130,7 @@
       metalness = 0.9;
       roughness = 0.25;
     } else if (variant === 3) {
-      color = 0x3b2525; // 木目
+      color = 0x3b2525; // 木
       metalness = 0.4;
       roughness = 0.7;
     }
@@ -143,10 +142,10 @@
     });
     const frame = new THREE.Mesh(frameGeo, frameMat);
 
-    // 内側の黒いマット
+    // 内側マット
     const innerGeo = new THREE.BoxGeometry(
-      width + 0.25,
-      height + 0.25,
+      width + 0.3,
+      height + 0.3,
       FRAME_DEPTH * 0.6
     );
     const innerMat = new THREE.MeshStandardMaterial({
@@ -154,7 +153,6 @@
       roughness: 0.9,
     });
     const inner = new THREE.Mesh(innerGeo, innerMat);
-    // ほんの少しだけ前に出す
     inner.position.z = FRAME_DEPTH * 0.15;
     frame.add(inner);
 
@@ -168,10 +166,11 @@
     const startX = -hallLength / 2 + margin * 1.5;
     const y = 2.4;
 
-    // 壁に貼り付ける（中心が壁面とほぼ同じ）
-    const z = isLeftWall
-      ? -hallWidth / 2 + FRAME_DEPTH / 2 + 0.001
-      : hallWidth / 2 - FRAME_DEPTH / 2 - 0.001;
+    // 壁にほぼ貼り付け
+    const z =
+      isLeftWall
+        ? -hallWidth / 2 + FRAME_DEPTH / 2 + 0.005
+        : hallWidth / 2 - FRAME_DEPTH / 2 - 0.005;
     const rotY = isLeftWall ? Math.PI / 2 : -Math.PI / 2;
 
     const perSide = Math.min(WORKS.length, 14);
@@ -189,18 +188,19 @@
       frame.position.set(x, y, z);
       frame.rotation.y = rotY;
 
-      // 作品画像
+      // 絵のテクスチャ
       const imgGeo = new THREE.PlaneGeometry(w, h);
       const imgMat = new THREE.MeshStandardMaterial({
         map: tex,
         roughness: 0.4,
         metalness: 0.2,
+        side: THREE.DoubleSide, // どちら側からでも見えるように
       });
       const imgMesh = new THREE.Mesh(imgGeo, imgMat);
-      imgMesh.position.set(0, 0, FRAME_DEPTH * 0.5);
+      imgMesh.position.set(0, 0, FRAME_DEPTH * 0.55);
       inner.add(imgMesh);
 
-      // スポットライト（上の小さいライト）
+      // 小さいスポットライト
       const spotGeo = new THREE.ConeGeometry(0.12, 0.28, 16);
       const spotMat = new THREE.MeshStandardMaterial({
         color: 0xffffff,
@@ -221,9 +221,9 @@
   addWorksToWall(true);
   addWorksToWall(false);
 
-  // --------------------------------
+  // -----------------------------
   // アバター
-  // --------------------------------
+  // -----------------------------
   const avatarGroup = new THREE.Group();
   scene.add(avatarGroup);
 
@@ -362,13 +362,14 @@
   }
 
   const avatarWorldPos = new THREE.Vector3();
-  let cameraYaw = Math.PI / 2; // 廊下の奥方向
-  let cameraPitch = 0.05; // 少しだけ下向き
+  let cameraYaw = Math.PI / 2;   // 廊下の奥方向
+  let cameraPitch = 0.05;
 
   function updateCameraImmediate() {
     if (!currentAvatar) return;
 
-    avatarWorldPos.setFromMatrixPosition(currentAvatar.matrixWorld);
+    // アバターのワールド位置（グループは動かしてないので position でOK）
+    avatarWorldPos.copy(currentAvatar.position);
 
     const forward = new THREE.Vector3(
       Math.sin(cameraYaw),
@@ -376,27 +377,25 @@
       Math.cos(cameraYaw)
     );
     const up = new THREE.Vector3(0, 1, 0);
-    const right = new THREE.Vector3().crossVectors(forward, up);
 
-    const backDistance = 9.0; // アバターを小さめに
-    const upOffsetBase = 3.2;
-    const upOffset = upOffsetBase + cameraPitch * 3.0; // 視線上下を少し反映
+    const backDistance = 14.0;   // 後ろに大きめ
+    const upOffset = 4.0 + cameraPitch * 2.0;
 
     const camPos = new THREE.Vector3()
       .copy(avatarWorldPos)
-      .addScaledVector(forward, -backDistance) // 後ろ
-      .addScaledVector(up, upOffset); // 上
+      .addScaledVector(forward, -backDistance)  // 「前方向」の反対側＝後ろ
+      .addScaledVector(up, upOffset);          // 上から見下ろす
 
     camera.position.copy(camPos);
 
     const lookTarget = new THREE.Vector3(
       avatarWorldPos.x,
-      avatarWorldPos.y + 1.5 + cameraPitch * 4.0,
+      avatarWorldPos.y + 1.7 + cameraPitch * 3.0,
       avatarWorldPos.z
     );
     camera.lookAt(lookTarget);
 
-    // アバターの向きもカメラ方向に合わせる（常に前を向いて歩く感じ）
+    // アバターもカメラの前方を向く
     currentAvatar.rotation.y = cameraYaw + Math.PI;
   }
 
@@ -412,19 +411,19 @@
     const avatar =
       type === 'human' ? createHumanVariant(seed) : createDogVariant(seed);
 
-    // 廊下の手前寄り・中央
+    // 廊下の手前・中央付近
     avatar.position.set(-hallLength / 2 + 6, 0, 0);
     avatarGroup.add(avatar);
     currentAvatar = avatar;
 
-    cameraYaw = Math.PI / 2;
+    cameraYaw = Math.PI / 2; // 廊下の奥方向を向く
     cameraPitch = 0.05;
     updateCameraImmediate();
   }
 
-  // --------------------------------
+  // -----------------------------
   // 視点ドラッグ
-  // --------------------------------
+  // -----------------------------
   let isDraggingView = false;
   let lastPointerX = 0;
   let lastPointerY = 0;
@@ -460,9 +459,9 @@
   window.addEventListener('pointerup', onPointerUp);
   window.addEventListener('pointercancel', onPointerUp);
 
-  // --------------------------------
+  // -----------------------------
   // ジョイスティック
-  // --------------------------------
+  // -----------------------------
   const joyBg = document.getElementById('joy-bg');
   const joyStick = document.getElementById('joy-stick');
   let joyRect = { x: 0, y: 0, r: 0 };
@@ -530,9 +529,9 @@
   window.addEventListener('pointerup', handleJoyEnd);
   window.addEventListener('pointercancel', handleJoyEnd);
 
-  // --------------------------------
-  // 作品クリック（モーダル表示）
-  // --------------------------------
+  // -----------------------------
+  // 作品クリック（モーダル）
+  // -----------------------------
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
 
@@ -584,9 +583,9 @@
     }
   });
 
-  // --------------------------------
+  // -----------------------------
   // アバターチェンジ UI
-  // --------------------------------
+  // -----------------------------
   const btnHuman =
     document.getElementById('btn-human') ||
     document.querySelector('[data-avatar="human"]');
@@ -622,9 +621,9 @@
   setAvatar('human');
   updateAvatarButtons();
 
-  // --------------------------------
+  // -----------------------------
   // アニメーション
-  // --------------------------------
+  // -----------------------------
   const clock = new THREE.Clock();
 
   function clampAvatarToHall() {
@@ -672,9 +671,9 @@
 
   animate();
 
-  // --------------------------------
+  // -----------------------------
   // リサイズ
-  // --------------------------------
+  // -----------------------------
   window.addEventListener('resize', () => {
     const w = window.innerWidth;
     const h = window.innerHeight;
