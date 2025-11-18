@@ -1,121 +1,106 @@
-* {
-  box-sizing: border-box;
+/* 全体 */
+html, body {
   margin: 0;
   padding: 0;
-}
-
-html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #050509;
+  background: #050507;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
-  color: #f5f5f5;
+  color: #fff;
 }
 
+/* Three.js キャンバス */
 #scene {
-  width: 100%;
-  height: 100%;
+  position: fixed;
+  inset: 0;
   display: block;
 }
 
-/* ---------- 上部 UI ---------- */
-
+/* 上部タイトル */
 #ui-top {
   position: fixed;
-  top: env(safe-area-inset-top, 8px);
-  left: 0;
-  right: 0;
-  padding: 8px 16px 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  pointer-events: none;
+  top: 16px;
+  left: 16px;
   z-index: 10;
-  font-size: 13px;
+  pointer-events: none;
 }
 
 #museum-title {
-  letter-spacing: 0.18em;
-  font-weight: 600;
-  pointer-events: auto;
+  letter-spacing: 0.25em;
+  font-size: 14px;
 }
 
 #museum-sub {
-  opacity: 0.7;
-  font-size: 11px;
   margin-top: 4px;
-}
-
-/* avatar switcher */
-
-#avatar-switcher {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  pointer-events: auto;
-}
-
-#avatar-label {
   font-size: 11px;
   opacity: 0.8;
 }
 
-.avatar-btn {
+/* アバターUI */
+#avatar-ui {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+}
+
+#avatar-label {
+  font-size: 11px;
+  opacity: 0.9;
+}
+
+.avatar-mode-btn {
+  border: none;
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.4);
-  background: rgba(0,0,0,0.6);
-  color: #f5f5f5;
-  padding: 4px 12px;
+  padding: 6px 14px;
   font-size: 12px;
-  min-width: 44px;
+  background: rgba(255,255,255,0.1);
+  color: #fff;
 }
 
-.avatar-btn.active {
-  background: #ffffff;
-  color: #000000;
+.avatar-mode-btn.active {
+  background: #fff;
+  color: #000;
 }
 
-/* ---------- ジョイスティック ---------- */
-
+/* ジョイスティック */
 #joy-container {
   position: fixed;
-  bottom: calc(env(safe-area-inset-bottom, 8px) + 16px);
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: center;
-  pointer-events: none;
-  z-index: 9;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 120px;
+  z-index: 10;
+  touch-action: none;
 }
 
 #joy-bg {
-  width: 120px;
-  height: 120px;
-  border-radius: 60px;
-  background: radial-gradient(circle at 30% 30%, #222 0, #000 60%);
-  opacity: 0.9;
-  position: relative;
-  pointer-events: auto;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #333, #000);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 #joy-stick {
   width: 56px;
   height: 56px;
-  border-radius: 28px;
+  border-radius: 50%;
   background: #f5f5f5;
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
 }
 
-/* ---------- 情報パネル ---------- */
-
+/* 作品情報パネル */
 #info-panel {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.78);
+  background: rgba(0,0,0,0.65);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -127,53 +112,32 @@ html, body {
 }
 
 #info-inner {
-  width: min(92vw, 480px);
-  max-height: 88vh;
   background: #111217;
-  border-radius: 16px;
-  padding: 16px 16px 20px;
-  box-shadow: 0 18px 45px rgba(0,0,0,0.6);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-#info-close {
-  align-self: flex-end;
-  border: none;
-  background: transparent;
-  color: #f5f5f5;
-  font-size: 22px;
-  line-height: 1;
-}
-
-#info-image-wrap {
-  width: 100%;
   border-radius: 12px;
-  overflow: hidden;
-  background: #000;
-}
-
-#info-image {
-  display: block;
-  width: 100%;
-  height: auto;
+  padding: 16px 18px;
+  width: min(320px, 90vw);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.6);
 }
 
 #info-title {
+  font-size: 15px;
   font-weight: 600;
-  margin-top: 4px;
+  margin-bottom: 8px;
 }
 
-#info-text {
+#info-desc {
+  font-size: 12px;
+  line-height: 1.6;
+  opacity: 0.9;
+  margin-bottom: 12px;
+}
+
+#info-close {
+  width: 100%;
+  border-radius: 999px;
+  border: none;
+  padding: 8px 0;
   font-size: 13px;
-  opacity: 0.86;
-}
-
-/* 小さな画面で UI が潰れないように */
-
-@media (max-width: 360px) {
-  #museum-title { font-size: 12px; }
-  #museum-sub { display: none; }
-  #avatar-label { display: none; }
+  background: #fff;
+  color: #000;
 }
