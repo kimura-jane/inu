@@ -3,198 +3,42 @@
 <head>
   <meta charset="UTF-8" />
   <title>TAF DOG MUSEUM</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      overflow: hidden;
-      background: #050509;
-      color: #ffffff;
-      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
-    }
-
-    #scene {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-
-    /* 上部UI */
-    .ui-top {
-      position: fixed;
-      top: 12px;
-      left: 16px;
-      right: 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      z-index: 10;
-      pointer-events: none;
-    }
-
-    .title {
-      font-size: 14px;
-      letter-spacing: 0.20em;
-      pointer-events: auto;
-      white-space: nowrap;
-    }
-
-    .avatar-toggle {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      pointer-events: auto;
-    }
-
-    .avatar-toggle-label {
-      font-size: 12px;
-      opacity: 0.8;
-    }
-
-    .avatar-toggle button {
-      font-size: 12px;
-      border-radius: 999px;
-      padding: 6px 14px;
-      border: 1px solid #ffffff;
-      background: transparent;
-      color: #ffffff;
-      cursor: pointer;
-    }
-
-    .avatar-toggle button.active {
-      background: #ffffff;
-      color: #000000;
-    }
-
-    /* ジョイスティック */
-    #joy-bg {
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 96px;
-      height: 96px;
-      border-radius: 999px;
-      background: rgba(0, 0, 0, 0.7);
-      box-shadow: 0 0 24px rgba(0, 0, 0, 0.7);
-      z-index: 9;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      touch-action: none;
-    }
-
-    #joy-stick {
-      width: 56px;
-      height: 56px;
-      border-radius: 999px;
-      background: #ffffff;
-      box-shadow: 0 0 18px rgba(0, 0, 0, 0.7);
-      transform: translate(0, 0);
-      touch-action: none;
-    }
-
-    /* 作品拡大パネル */
-    #info-panel {
-      position: fixed;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%) scale(0.9);
-      width: min(90vw, 520px);
-      max-height: 80vh;
-      background: rgba(10, 10, 14, 0.96);
-      border-radius: 18px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85);
-      padding: 14px 14px 18px;
-      box-sizing: border-box;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.18s ease, transform 0.18s ease;
-      z-index: 20;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    #info-panel.show {
-      opacity: 1;
-      pointer-events: auto;
-      transform: translate(-50%, -50%) scale(1);
-    }
-
-    #info-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-    }
-
-    #info-title {
-      font-size: 14px;
-      letter-spacing: 0.08em;
-    }
-
-    #info-close {
-      border: none;
-      border-radius: 999px;
-      width: 26px;
-      height: 26px;
-      font-size: 16px;
-      line-height: 26px;
-      text-align: center;
-      background: #ffffff;
-      color: #000000;
-      cursor: pointer;
-      flex: 0 0 auto;
-    }
-
-    #info-image {
-      width: 100%;
-      border-radius: 12px;
-      background: #000;
-      object-fit: contain;
-      max-height: 48vh;
-    }
-
-    #info-desc {
-      font-size: 12px;
-      opacity: 0.85;
-      line-height: 1.5;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <!-- 上部UI -->
+  <header id="ui-top">
+    <div id="logo">TAF DOG MUSEUM</div>
+    <div id="avatar-ui">
+      <span id="avatar-label">アバターチェンジ</span>
+      <button class="avatar-btn active" data-type="human">人間</button>
+      <button class="avatar-btn" data-type="dog">犬</button>
+    </div>
+  </header>
+
+  <!-- 3Dシーン -->
   <canvas id="scene"></canvas>
 
-  <div class="ui-top">
-    <div class="title">TAF DOG MUSEUM</div>
-    <div class="avatar-toggle">
-      <span class="avatar-toggle-label">アバターチェンジ</span>
-      <button id="btn-human" class="avatar-btn active" data-type="human">人間</button>
-      <button id="btn-dog" class="avatar-btn" data-type="dog">犬</button>
+  <!-- ジョイスティック -->
+  <div id="joy-container">
+    <div id="joy-bg">
+      <div id="joy-stick"></div>
     </div>
   </div>
 
-  <div id="joy-bg">
-    <div id="joy-stick"></div>
-  </div>
-
-  <div id="info-panel">
-    <div id="info-header">
-      <div id="info-title"></div>
+  <!-- 作品拡大パネル -->
+  <div id="info-panel" class="hidden">
+    <div id="info-inner">
       <button id="info-close">×</button>
+      <div id="info-title"></div>
+      <img id="info-image" alt="" />
     </div>
-    <img id="info-image" src="" alt="" />
-    <div id="info-desc"></div>
   </div>
 
-  <!-- three.js本体 -->
-  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-  <!-- 作品データ（お前の data.js をそのまま使う） -->
+  <!-- Three.js とデータ & スクリプト -->
+  <script src="https://unpkg.com/three@0.161.0/build/three.min.js"></script>
   <script src="data.js"></script>
-  <!-- メインスクリプト -->
   <script src="app.js"></script>
 </body>
 </html>
