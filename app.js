@@ -1,9 +1,7 @@
 // app.js  TAF DOG MUSEUM
-// 三人称視点＋ジョイスティック＋アバターチェンジ（人間/犬）
-
 (function () {
   const canvas = document.getElementById('scene');
-  if (!canvas) return;
+  if (!canvas || !window.THREE) return;
 
   // ---------- 基本セットアップ ----------
   const renderer = new THREE.WebGLRenderer({
@@ -12,7 +10,6 @@
     alpha: true
   });
   renderer.setPixelRatio(window.devicePixelRatio);
-  resizeRenderer();
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x050508);
@@ -24,7 +21,6 @@
     300
   );
 
-  // ホールサイズ
   const HALL_LENGTH = 80;
   const HALL_WIDTH = 14;
   const WALL_HEIGHT = 7;
@@ -38,8 +34,6 @@
     emissive: 0xffffff,
     emissiveIntensity: 1.3
   });
-
-  const pointLights = [];
 
   // ---------- 床・天井・壁 ----------
   const floorMat = new THREE.MeshStandardMaterial({
@@ -71,38 +65,36 @@
   });
   const wallGeo = new THREE.PlaneGeometry(HALL_LENGTH, WALL_HEIGHT);
 
-  // 左壁
   const leftWall = new THREE.Mesh(wallGeo, wallMat);
   leftWall.position.set(-HALL_WIDTH / 2, WALL_HEIGHT / 2, HALL_LENGTH / 2);
   leftWall.rotation.y = Math.PI / 2;
   scene.add(leftWall);
 
-  // 右壁
   const rightWall = new THREE.Mesh(wallGeo, wallMat);
   rightWall.position.set(HALL_WIDTH / 2, WALL_HEIGHT / 2, HALL_LENGTH / 2);
   rightWall.rotation.y = -Math.PI / 2;
   scene.add(rightWall);
 
-  // ---------- 天井の照明パネル ----------
-  const lightPanelGeo = new THREE.BoxGeometry(4, 0.05, 0.6);
+  // ---------- 天井ライト ----------
   const NUM_LIGHTS = 10;
+  const lightPanelGeo = new THREE.BoxGeometry(4, 0.05, 0.6);
   for (let i = 0; i < NUM_LIGHTS; i++) {
-    const panel = new THREE.Mesh(lightPanelGeo, ceilingLightMat);
     const z = 6 + ((HALL_LENGTH - 16) / (NUM_LIGHTS - 1)) * i;
+
+    const panel = new THREE.Mesh(lightPanelGeo, ceilingLightMat);
     panel.position.set(0, WALL_HEIGHT - 0.15, z);
     scene.add(panel);
 
     const pLight = new THREE.PointLight(0xffffff, 0.6, 25, 2);
     pLight.position.set(0, WALL_HEIGHT - 0.1, z);
     scene.add(pLight);
-    pointLights.push(pLight);
   }
 
   // ---------- 額縁 & 絵 ----------
   const clickablePaintings = [];
   const textureLoader = new THREE.TextureLoader();
 
-  const frameDepth = 0.4;
+  const frameDepth = 0.35;
   const frameOuterW = 3.2;
   const frameOuterH = 4.4;
   const frameInnerW = 2.6;
@@ -132,6 +124,7 @@
     })
   };
 
+  // 壁にぴったり貼り付くように、Z=長手方向 / X=幅 に注意
   const pictureGeo = new THREE.PlaneGeometry(frameInnerH, frameInnerW);
 
   const frameTypes = ['gold', 'dark', 'metal'];
@@ -144,28 +137,34 @@
   const spotlightGeo = new THREE.ConeGeometry(0.7, 2.4, 16, 1, true);
 
   function addPaintings() {
-    const works = window.WORKS;
+    let works = null;
+    if (typeof WORKS !== 'undefined') {
+      works = WORKS;
+    } else if (Array.isArray(window.WORKS)) {
+      works = window.WORKS;
+    }
     if (!Array.isArray(works)) return;
 
     const spacing = (HALL_LENGTH - 20) / works.length;
 
     for (let i = 0; i < works.length; i++) {
       const work = works[i];
-
       const isLeft = i % 2 === 0;
       const sideSign = isLeft ? -1 : 1;
-      const wallX = (HALL_WIDTH / 2 - 0.1 - frameDepth / 2) * sideSign;
+      const wallX = (HALL_WIDTH / 2 - 0.05 - frameDepth / 2) * sideSign;
       const baseZ = 10 + spacing * i;
 
       const frameType = frameTypes[i % frameTypes.length];
       const frameGeo = frameGeos[frameType];
       const frameMat = frameMats[frameType];
 
+      // 額縁（壁に水平）
       const frameMesh = new THREE.Mesh(frameGeo, frameMat);
       frameMesh.position.set(wallX, WALL_HEIGHT * 0.55, baseZ);
       frameMesh.rotation.y = isLeft ? Math.PI / 2 : -Math.PI / 2;
       scene.add(frameMesh);
 
+      // 絵
       const tex = textureLoader.load(work.image);
       tex.minFilter = THREE.LinearFilter;
       const picMat = new THREE.MeshBasicMaterial({ map: tex });
@@ -182,6 +181,7 @@
       scene.add(picture);
       clickablePaintings.push(picture);
 
+      // スポットライト（壁側から斜め下）
       const cone = new THREE.Mesh(spotlightGeo, spotlightMat);
       cone.position.set(
         wallX + (isLeft ? frontOffset * 0.3 : -frontOffset * 0.3),
@@ -200,41 +200,23 @@
   const avatarGroup = new THREE.Group();
   scene.add(avatarGroup);
 
-  const AVATAR_START_Z = 4;
+  const AVATAR_START_Z = 6;
   const AVATAR_Y = 0;
 
   let currentAvatar = null;
   let currentAvatarType = 'human';
 
   const HUMAN_COLORS = [
-    0x4477ff,
-    0xff9933,
-    0x55aa55,
-    0xaa55aa,
-    0xcccc33,
-    0xff5555,
-    0x339999,
-    0x996633,
-    0x7777ff,
-    0xff77aa
+    0x4477ff, 0xff9933, 0x55aa55, 0xaa55aa, 0xcccc33,
+    0xff5555, 0x339999, 0x996633, 0x7777ff, 0xff77aa
   ];
-
   const DOG_COLORS = [
-    0x333333,
-    0x886644,
-    0xffffff,
-    0xffe4b5,
-    0x444444,
-    0xaa7744,
-    0xd2b48c,
-    0x555555,
-    0xdeb887,
-    0x666666
+    0x333333, 0x886644, 0xffffff, 0xffe4b5, 0x444444,
+    0xaa7744, 0xd2b48c, 0x555555, 0xdeb887, 0x666666
   ];
 
   function createHuman(index) {
     const g = new THREE.Group();
-
     const skinColor = 0xd8b49c;
     const bodyColor = HUMAN_COLORS[index % HUMAN_COLORS.length];
     const hairColor = index % 2 === 0 ? 0x111111 : 0x553322;
@@ -344,7 +326,6 @@
 
   const humans = [];
   const dogs = [];
-
   for (let i = 0; i < 10; i++) {
     const h = createHuman(i);
     h.visible = false;
@@ -362,7 +343,6 @@
 
   function activateAvatar(type) {
     currentAvatarType = type;
-
     humans.forEach(h => (h.visible = false));
     dogs.forEach(d => (d.visible = false));
 
@@ -382,13 +362,11 @@
   // ---------- カメラ ----------
   let cameraYaw = 0;
   let cameraPitch = 0;
-
   const CAMERA_DIST = 8;
   const CAMERA_HEIGHT = 4;
 
   function updateCamera() {
     if (!currentAvatar) return;
-
     const target = currentAvatar.position.clone();
     target.y += 2.5;
 
@@ -406,7 +384,7 @@
     camera.lookAt(lookTarget);
   }
 
-  // ---------- 画面ドラッグで視点変更 ----------
+  // ---------- 視点ドラッグ ----------
   let draggingView = false;
   let lastX = 0;
   let lastY = 0;
@@ -444,61 +422,65 @@
   let joyDY = 0;
 
   function updateJoyCenter() {
+    if (!joyBg) return;
     const rect = joyBg.getBoundingClientRect();
     joyCenter.x = rect.left + rect.width / 2;
     joyCenter.y = rect.top + rect.height / 2;
   }
-  updateJoyCenter();
-  window.addEventListener('resize', updateJoyCenter);
 
-  function handleJoyStart(e) {
-    joyActive = true;
-    const p = e.touches ? e.touches[0] : e;
-    moveJoy(p.clientX, p.clientY);
+  if (joyBg && joyStick) {
+    updateJoyCenter();
+    window.addEventListener('resize', updateJoyCenter);
+
+    function handleJoyStart(e) {
+      joyActive = true;
+      const p = e.touches ? e.touches[0] : e;
+      moveJoy(p.clientX, p.clientY);
+    }
+
+    function handleJoyMove(e) {
+      if (!joyActive) return;
+      const p = e.touches ? e.touches[0] : e;
+      moveJoy(p.clientX, p.clientY);
+    }
+
+    function handleJoyEnd() {
+      joyActive = false;
+      joyDX = 0;
+      joyDY = 0;
+      joyStick.style.transform = 'translate(0, 0)';
+    }
+
+    function moveJoy(x, y) {
+      const dx = x - joyCenter.x;
+      const dy = y - joyCenter.y;
+      const maxR = 40;
+      const dist = Math.min(Math.sqrt(dx * dx + dy * dy), maxR);
+      const ang = Math.atan2(dy, dx);
+      const nx = Math.cos(ang) * dist;
+      const ny = Math.sin(ang) * dist;
+
+      joyStick.style.transform = `translate(${nx}px, ${ny}px)`;
+
+      joyDX = nx / maxR;
+      joyDY = ny / maxR;
+    }
+
+    joyBg.addEventListener('pointerdown', handleJoyStart);
+    window.addEventListener('pointermove', handleJoyMove);
+    window.addEventListener('pointerup', handleJoyEnd);
+    joyBg.addEventListener('touchstart', handleJoyStart, { passive: true });
+    window.addEventListener('touchmove', handleJoyMove, { passive: true });
+    window.addEventListener('touchend', handleJoyEnd);
   }
-
-  function handleJoyMove(e) {
-    if (!joyActive) return;
-    const p = e.touches ? e.touches[0] : e;
-    moveJoy(p.clientX, p.clientY);
-  }
-
-  function handleJoyEnd() {
-    joyActive = false;
-    joyDX = 0;
-    joyDY = 0;
-    joyStick.style.transform = 'translate(-50%, -50%)';
-  }
-
-  function moveJoy(x, y) {
-    const dx = x - joyCenter.x;
-    const dy = y - joyCenter.y;
-    const maxR = 40;
-    const dist = Math.min(Math.sqrt(dx * dx + dy * dy), maxR);
-    const ang = Math.atan2(dy, dx);
-    const nx = Math.cos(ang) * dist;
-    const ny = Math.sin(ang) * dist;
-
-    joyStick.style.transform = `translate(${nx}px, ${ny}px)`;
-
-    joyDX = nx / maxR;
-    joyDY = ny / maxR;
-  }
-
-  joyBg.addEventListener('pointerdown', handleJoyStart);
-  window.addEventListener('pointermove', handleJoyMove);
-  window.addEventListener('pointerup', handleJoyEnd);
-  joyBg.addEventListener('touchstart', handleJoyStart, { passive: true });
-  window.addEventListener('touchmove', handleJoyMove, { passive: true });
-  window.addEventListener('touchend', handleJoyEnd);
 
   // ---------- アバター移動 ----------
   const avatarSpeed = 0.12;
-
   function updateAvatarPosition() {
     if (!currentAvatar) return;
     if (!joyActive && Math.abs(joyDX) < 0.01 && Math.abs(joyDY) < 0.01) return;
 
+    // ジョイスティック：上＝前、左＝左
     const forward = -joyDY;
     const strafe = joyDX;
 
@@ -521,12 +503,8 @@
   }
 
   // ---------- アバターチェンジ ----------
-  const btnHuman = document.getElementById('btn-human') ||
-    document.querySelector('[data-avatar-type="human"]') ||
-    document.querySelector('#avatar-human');
-  const btnDog = document.getElementById('btn-dog') ||
-    document.querySelector('[data-avatar-type="dog"]') ||
-    document.querySelector('#avatar-dog');
+  const btnHuman = document.getElementById('btn-human');
+  const btnDog = document.getElementById('btn-dog');
 
   function setAvatarButtons(type) {
     if (!btnHuman || !btnDog) return;
@@ -557,32 +535,15 @@
 
   setAvatarButtons('human');
 
-  // ---------- 絵の拡大表示 ----------
+  // ---------- 絵の拡大 ----------
   let overlay = document.getElementById('info-panel');
   if (!overlay) {
     overlay = document.createElement('div');
     overlay.id = 'info-panel';
-    overlay.style.position = 'fixed';
-    overlay.style.left = '0';
-    overlay.style.top = '0';
-    overlay.style.right = '0';
-    overlay.style.bottom = '0';
-    overlay.style.background = 'rgba(0,0,0,0.85)';
-    overlay.style.display = 'none';
-    overlay.style.alignItems = 'center';
-    overlay.style.justifyContent = 'center';
-    overlay.style.zIndex = '20';
-    overlay.style.padding = '16px';
     document.body.appendChild(overlay);
 
     const inner = document.createElement('div');
     inner.id = 'info-inner';
-    inner.style.maxWidth = '96vw';
-    inner.style.maxHeight = '90vh';
-    inner.style.background = '#111';
-    inner.style.borderRadius = '16px';
-    inner.style.overflow = 'hidden';
-    inner.style.position = 'relative';
     overlay.appendChild(inner);
 
     const closeBtn = document.createElement('button');
@@ -599,26 +560,14 @@
 
     const img = document.createElement('img');
     img.id = 'info-image';
-    img.style.display = 'block';
-    img.style.maxWidth = '100%';
-    img.style.maxHeight = '80vh';
-    img.style.margin = '32px auto 8px';
     inner.appendChild(img);
 
     const cap = document.createElement('div');
     cap.id = 'info-caption';
-    cap.style.color = '#fff';
-    cap.style.fontSize = '14px';
-    cap.style.textAlign = 'center';
-    cap.style.padding = '0 12px 12px';
     inner.appendChild(cap);
 
-    closeBtn.addEventListener('click', () => {
-      overlay.style.display = 'none';
-    });
-    overlay.addEventListener('click', e => {
-      if (e.target === overlay) overlay.style.display = 'none';
-    });
+    closeBtn.addEventListener('click', () => { overlay.style.display = 'none'; });
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.style.display = 'none'; });
   }
 
   const infoImg = document.getElementById('info-image');
@@ -648,18 +597,7 @@
 
   canvas.addEventListener('click', onCanvasTap);
 
-  // ---------- アニメーション ----------
-  function animate() {
-    requestAnimationFrame(animate);
-    updateAvatarPosition();
-    updateCamera();
-    renderer.render(scene, camera);
-  }
-  animate();
-
-  // ---------- リサイズ ----------
-  window.addEventListener('resize', resizeRenderer);
-
+  // ---------- レンダリング ----------
   function resizeRenderer() {
     const w = window.innerWidth;
     const h = window.innerHeight;
@@ -667,4 +605,16 @@
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
   }
+
+  window.addEventListener('resize', resizeRenderer);
+  resizeRenderer();
+  updateCamera();
+
+  function animate() {
+    requestAnimationFrame(animate);
+    updateAvatarPosition();
+    updateCamera();
+    renderer.render(scene, camera);
+  }
+  animate();
 })();
