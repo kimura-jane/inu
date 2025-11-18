@@ -1,46 +1,45 @@
-/* 全体レイアウト */
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
 body {
   margin: 0;
   padding: 0;
-  height: 100%;
-  overflow: hidden;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue",
-    Arial, sans-serif;
-  background: #050507;
-  color: #f5f5f5;
-}
-
-/* 3Dキャンバス */
-#scene {
-  position: fixed;
-  inset: 0;
-  display: block;
   width: 100%;
   height: 100%;
-  touch-action: none;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  background: #050509;
+  color: #ffffff;
 }
 
-/* 上部UI */
-#ui-top {
+#scene {
   position: fixed;
-  top: env(safe-area-inset-top, 0);
+  top: 0;
   left: 0;
-  right: 0;
-  padding: 12px 16px;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* 上部バー */
+#top-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 8px 16px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   z-index: 10;
   pointer-events: none;
 }
 
 #logo {
-  letter-spacing: 0.18em;
+  letter-spacing: 0.15em;
   font-size: 14px;
   font-weight: 600;
   pointer-events: auto;
@@ -49,7 +48,7 @@ body {
 #avatar-ui {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   pointer-events: auto;
 }
 
@@ -58,110 +57,70 @@ body {
   opacity: 0.8;
 }
 
-/* アバターボタン */
 .avatar-btn {
   border: none;
   border-radius: 999px;
   padding: 6px 14px;
   font-size: 13px;
   background: rgba(255, 255, 255, 0.08);
-  color: #f5f5f5;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  color: #ffffff;
+  cursor: pointer;
 }
 
 .avatar-btn.active {
   background: #ffffff;
-  color: #111111;
+  color: #000000;
 }
 
 /* ジョイスティック */
 #joy-container {
   position: fixed;
-  bottom: calc(16px + env(safe-area-inset-bottom, 0));
+  bottom: 32px;
   left: 50%;
   transform: translateX(-50%);
   width: 120px;
   height: 120px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9;
-  touch-action: none;
+  z-index: 10;
+  pointer-events: none;
 }
 
 #joy-bg {
-  width: 96px;
-  height: 96px;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
-  background: radial-gradient(
-    circle at 30% 30%,
-    rgba(255, 255, 255, 0.16),
-    rgba(0, 0, 0, 0.9)
-  );
+  background: radial-gradient(circle, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.4));
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: auto;
+  touch-action: none;
 }
 
 #joy-stick {
-  width: 52px;
-  height: 52px;
+  width: 54px;
+  height: 54px;
   border-radius: 50%;
   background: #ffffff;
-  box-shadow: 0 0 16px rgba(0, 0, 0, 0.6);
 }
 
-/* 作品インフォパネル */
-#info-panel {
+/* 画像拡大オーバーレイ */
+#modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
+  background: rgba(0, 0, 0, 0.9);
+  display: none;
   align-items: center;
   justify-content: center;
   z-index: 20;
 }
 
-#info-panel.hidden {
-  display: none;
-}
-
-#info-inner {
-  width: min(90vw, 420px);
-  max-height: 80vh;
-  background: #111114;
+#modal-overlay img {
+  max-width: 90%;
+  max-height: 80%;
   border-radius: 16px;
-  padding: 16px 16px 20px;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.65);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+}
+
+#modal-overlay.active {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
 }
-
-#info-close {
-  align-self: flex-end;
-  border: none;
-  border-radius: 999px;
-  width: 28px;
-  height: 28px;
-  font-size: 18px;
-  line-height: 1;
-  padding: 0;
-  background: rgba(255, 255, 255, 0.08);
-  color: #f5f5f5;
-}
-
-#info-title {
-  font-size: 14px;
-  letter-spacing: 0.12em;
-  opacity: 0.9;
-}
-
-#info-image {
-  width: 100%;
-  border-radius: 10px;
-  object-fit: cover;
-}
-
-/* スクロール防止のため body には touch-action は付けない */
