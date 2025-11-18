@@ -2,23 +2,25 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>TAF DOG MUSEUM</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <!-- 上部UI -->
   <div id="ui-top">
-    <div>
-      <div id="museum-title">TAF DOG MUSEUM</div>
-      <div id="museum-sub">ドラッグで見回す / ジョイスティックで歩く / タップで拡大</div>
-    </div>
-    <div id="avatar-ui">
-      <span id="avatar-label">アバターチェンジ</span>
-      <button class="avatar-mode-btn active" data-mode="human">人間</button>
-      <button class="avatar-mode-btn" data-mode="dog">犬</button>
-    </div>
+    <div id="museum-title">TAF DOG MUSEUM</div>
+    <div id="museum-sub">ドラッグで見回す / ジョイスティックで歩く / タップで拡大</div>
   </div>
 
+  <!-- アバター切り替え UI -->
+  <div id="avatar-ui">
+    <span id="avatar-label">アバターチェンジ</span>
+    <button id="btn-human" class="avatar-mode-btn active">人間</button>
+    <button id="btn-dog" class="avatar-mode-btn">犬</button>
+  </div>
+
+  <!-- Three.js 描画用キャンバス -->
   <canvas id="scene"></canvas>
 
   <!-- ジョイスティック -->
@@ -28,16 +30,16 @@
     </div>
   </div>
 
-  <!-- 作品情報（タップした時） -->
+  <!-- 作品情報パネル -->
   <div id="info-panel" class="hidden">
     <div id="info-inner">
-      <button id="info-close">×</button>
       <div id="info-title"></div>
       <div id="info-desc"></div>
+      <button id="info-close">閉じる</button>
     </div>
   </div>
 
-  <!-- three.js & app -->
+  <!-- Three.js & アプリ -->
   <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
   <script src="data.js"></script>
   <script src="app.js"></script>
