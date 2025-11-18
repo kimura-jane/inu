@@ -25,8 +25,8 @@
   );
 
   // ホールサイズ
-  const HALL_LENGTH = 80;  // 奥行き
-  const HALL_WIDTH = 14;   // 左右の幅
+  const HALL_LENGTH = 80;
+  const HALL_WIDTH = 14;
   const WALL_HEIGHT = 7;
 
   // ---------- ライト ----------
@@ -71,13 +71,13 @@
   });
   const wallGeo = new THREE.PlaneGeometry(HALL_LENGTH, WALL_HEIGHT);
 
-  // 左壁 (x マイナス側)
+  // 左壁
   const leftWall = new THREE.Mesh(wallGeo, wallMat);
   leftWall.position.set(-HALL_WIDTH / 2, WALL_HEIGHT / 2, HALL_LENGTH / 2);
   leftWall.rotation.y = Math.PI / 2;
   scene.add(leftWall);
 
-  // 右壁 (x プラス側)
+  // 右壁
   const rightWall = new THREE.Mesh(wallGeo, wallMat);
   rightWall.position.set(HALL_WIDTH / 2, WALL_HEIGHT / 2, HALL_LENGTH / 2);
   rightWall.rotation.y = -Math.PI / 2;
@@ -132,7 +132,7 @@
     })
   };
 
-  const pictureGeo = new THREE.PlaneGeometry(frameInnerH, frameInnerW); // 向きは後で回転
+  const pictureGeo = new THREE.PlaneGeometry(frameInnerH, frameInnerW);
 
   const frameTypes = ['gold', 'dark', 'metal'];
 
@@ -144,15 +144,14 @@
   const spotlightGeo = new THREE.ConeGeometry(0.7, 2.4, 16, 1, true);
 
   function addPaintings() {
-    if (!window.WORKS || !Array.isArray(WORKS)) return;
+    const works = window.WORKS;
+    if (!Array.isArray(works)) return;
 
-    const works = WORKS;
     const spacing = (HALL_LENGTH - 20) / works.length;
 
     for (let i = 0; i < works.length; i++) {
       const work = works[i];
 
-      // 左右交互に貼る
       const isLeft = i % 2 === 0;
       const sideSign = isLeft ? -1 : 1;
       const wallX = (HALL_WIDTH / 2 - 0.1 - frameDepth / 2) * sideSign;
@@ -167,13 +166,11 @@
       frameMesh.rotation.y = isLeft ? Math.PI / 2 : -Math.PI / 2;
       scene.add(frameMesh);
 
-      // 絵のテクスチャ
       const tex = textureLoader.load(work.image);
       tex.minFilter = THREE.LinearFilter;
       const picMat = new THREE.MeshBasicMaterial({ map: tex });
 
       const picture = new THREE.Mesh(pictureGeo, picMat);
-      // 額縁の前面にぴったり貼り付け
       const frontOffset = frameDepth / 2 + 0.01;
       picture.position.set(
         wallX + (isLeft ? frontOffset : -frontOffset),
@@ -185,14 +182,13 @@
       scene.add(picture);
       clickablePaintings.push(picture);
 
-      // スポットライト的なコーン
       const cone = new THREE.Mesh(spotlightGeo, spotlightMat);
       cone.position.set(
         wallX + (isLeft ? frontOffset * 0.3 : -frontOffset * 0.3),
         WALL_HEIGHT - 0.4,
         baseZ
       );
-      cone.rotation.x = Math.PI; // 下向き
+      cone.rotation.x = Math.PI;
       cone.rotation.z = isLeft ? -Math.PI / 2 : Math.PI / 2;
       scene.add(cone);
     }
@@ -208,7 +204,7 @@
   const AVATAR_Y = 0;
 
   let currentAvatar = null;
-  let currentAvatarType = 'human'; // 'human' or 'dog'
+  let currentAvatarType = 'human';
 
   const HUMAN_COLORS = [
     0x4477ff,
@@ -243,7 +239,6 @@
     const bodyColor = HUMAN_COLORS[index % HUMAN_COLORS.length];
     const hairColor = index % 2 === 0 ? 0x111111 : 0x553322;
 
-    // 足
     const legGeo = new THREE.CylinderGeometry(0.25, 0.25, 1.2, 12);
     const legMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
     const legL = new THREE.Mesh(legGeo, legMat);
@@ -252,7 +247,6 @@
     legR.position.set(0.35, 0.6, 0);
     g.add(legL, legR);
 
-    // 体
     const bodyGeo = new THREE.CylinderGeometry(0.9, 0.9, 2.2, 20);
     const bodyMat = new THREE.MeshStandardMaterial({
       color: bodyColor,
@@ -263,7 +257,6 @@
     body.position.y = 2.2;
     g.add(body);
 
-    // 腕
     const armGeo = new THREE.CylinderGeometry(0.2, 0.2, 1.6, 12);
     const armMat = bodyMat;
     const armL = new THREE.Mesh(armGeo, armMat);
@@ -274,21 +267,18 @@
     armR.rotation.z = -Math.PI / 16;
     g.add(armL, armR);
 
-    // 首
     const neckGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.4, 12);
     const neckMat = new THREE.MeshStandardMaterial({ color: skinColor });
     const neck = new THREE.Mesh(neckGeo, neckMat);
     neck.position.y = 3.5;
     g.add(neck);
 
-    // 頭
     const headGeo = new THREE.SphereGeometry(0.9, 20, 20);
     const headMat = neckMat;
     const head = new THREE.Mesh(headGeo, headMat);
     head.position.y = 4.6;
     g.add(head);
 
-    // 髪
     const hairGeo = new THREE.SphereGeometry(0.95, 20, 20, 0, Math.PI * 2, 0, Math.PI / 2);
     const hairMat = new THREE.MeshStandardMaterial({
       color: hairColor,
@@ -312,19 +302,16 @@
       metalness: 0.1
     });
 
-    // 体
     const bodyGeo = new THREE.BoxGeometry(2.2, 1.8, 3.0);
     const body = new THREE.Mesh(bodyGeo, bodyMat);
     body.position.y = 1.2;
     g.add(body);
 
-    // 頭
     const headGeo = new THREE.BoxGeometry(1.6, 1.6, 1.6);
     const head = new THREE.Mesh(headGeo, bodyMat);
     head.position.set(0, 2.2, 1.7);
     g.add(head);
 
-    // 耳
     const earGeo = new THREE.BoxGeometry(0.4, 0.9, 0.2);
     const earL = new THREE.Mesh(earGeo, bodyMat);
     const earR = new THREE.Mesh(earGeo, bodyMat);
@@ -332,7 +319,6 @@
     earR.position.set(0.6, 3.0, 1.4);
     g.add(earL, earR);
 
-    // 足
     const legGeo = new THREE.CylinderGeometry(0.22, 0.22, 1.1, 10);
     const legMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
     const legPositions = [
@@ -347,7 +333,6 @@
       g.add(leg);
     });
 
-    // しっぽ
     const tailGeo = new THREE.CylinderGeometry(0.15, 0.25, 1.4, 10);
     const tail = new THREE.Mesh(tailGeo, bodyMat);
     tail.position.set(0, 2.0, -1.7);
@@ -389,14 +374,14 @@
 
     currentAvatar.visible = true;
     currentAvatar.position.set(0, AVATAR_Y, AVATAR_START_Z);
-    currentAvatar.rotation.y = 0; // 正面＝奥方向
+    currentAvatar.rotation.y = 0;
   }
 
   activateAvatar('human');
 
-  // ---------- カメラ制御（常に真後ろ） ----------
-  let cameraYaw = 0;   // 水平回転
-  let cameraPitch = 0; // 上下（あまり動かさない）
+  // ---------- カメラ ----------
+  let cameraYaw = 0;
+  let cameraPitch = 0;
 
   const CAMERA_DIST = 8;
   const CAMERA_HEIGHT = 4;
@@ -410,7 +395,7 @@
     const offset = new THREE.Vector3(
       Math.sin(cameraYaw) * CAMERA_DIST,
       CAMERA_HEIGHT,
-      -Math.cos(cameraYaw) * CAMERA_DIST // avatarの正面を奥(Z+)とする
+      -Math.cos(cameraYaw) * CAMERA_DIST
     );
 
     const camPos = target.clone().add(offset);
@@ -441,7 +426,7 @@
     lastX = e.clientX;
     lastY = e.clientY;
 
-    cameraYaw -= dx * 0.005; // 右にドラッグ→右を見る
+    cameraYaw -= dx * 0.005;
     cameraPitch -= dy * 0.003;
     cameraPitch = Math.max(-1.0, Math.min(1.0, cameraPitch));
   });
@@ -507,18 +492,16 @@
   window.addEventListener('touchmove', handleJoyMove, { passive: true });
   window.addEventListener('touchend', handleJoyEnd);
 
-  // ---------- アバターの移動 ----------
+  // ---------- アバター移動 ----------
   const avatarSpeed = 0.12;
 
   function updateAvatarPosition() {
     if (!currentAvatar) return;
     if (!joyActive && Math.abs(joyDX) < 0.01 && Math.abs(joyDY) < 0.01) return;
 
-    // joyDY < 0 で前進（画面上方向）にする
     const forward = -joyDY;
     const strafe = joyDX;
 
-    // カメラの向きに合わせて移動方向を決める
     const sin = Math.sin(cameraYaw);
     const cos = Math.cos(cameraYaw);
 
@@ -528,7 +511,6 @@
     currentAvatar.position.x += moveX;
     currentAvatar.position.z += moveZ;
 
-    // 壁の内側に制限
     const margin = 1.6;
     const maxX = HALL_WIDTH / 2 - margin;
     currentAvatar.position.x = Math.max(-maxX, Math.min(maxX, currentAvatar.position.x));
@@ -538,7 +520,7 @@
     currentAvatar.position.z = Math.max(minZ, Math.min(maxZ, currentAvatar.position.z));
   }
 
-  // ---------- アバターチェンジボタン ----------
+  // ---------- アバターチェンジ ----------
   const btnHuman = document.getElementById('btn-human') ||
     document.querySelector('[data-avatar-type="human"]') ||
     document.querySelector('#avatar-human');
@@ -575,8 +557,7 @@
 
   setAvatarButtons('human');
 
-  // ---------- 絵をタップしたときの拡大 ----------
-  // DOMが無い場合はここで作る
+  // ---------- 絵の拡大表示 ----------
   let overlay = document.getElementById('info-panel');
   if (!overlay) {
     overlay = document.createElement('div');
@@ -648,8 +629,8 @@
 
   function onCanvasTap(event) {
     const rect = canvas.getBoundingClientRect();
-    const x = ( (event.clientX - rect.left) / rect.width ) * 2 - 1;
-    const y = - ( (event.clientY - rect.top) / rect.height ) * 2 + 1;
+    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
     pointer.set(x, y);
 
     raycaster.setFromCamera(pointer, camera);
@@ -667,7 +648,7 @@
 
   canvas.addEventListener('click', onCanvasTap);
 
-  // ---------- アニメーションループ ----------
+  // ---------- アニメーション ----------
   function animate() {
     requestAnimationFrame(animate);
     updateAvatarPosition();
