@@ -1,110 +1,125 @@
-html, body {
+* {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
   overflow: hidden;
-  background: #050507;
-  color: #ffffff;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
-               "Helvetica Neue", Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  touch-action: none;
+  background: #050509;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  color: #f5f5f5;
 }
 
 #scene {
+  width: 100%;
+  height: 100%;
   display: block;
-  width: 100vw;
-  height: 100vh;
 }
 
-/* 上部タイトル */
+/* ---------- 上部 UI ---------- */
+
 #ui-top {
   position: fixed;
-  top: 10px;
-  left: 16px;
-  z-index: 20;
+  top: env(safe-area-inset-top, 8px);
+  left: 0;
+  right: 0;
+  padding: 8px 16px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   pointer-events: none;
+  z-index: 10;
+  font-size: 13px;
 }
 
 #museum-title {
-  font-size: 14px;
-  font-weight: 600;
   letter-spacing: 0.18em;
-  text-transform: uppercase;
-  opacity: 0.9;
+  font-weight: 600;
+  pointer-events: auto;
 }
 
 #museum-sub {
+  opacity: 0.7;
   font-size: 11px;
   margin-top: 4px;
-  opacity: 0.6;
 }
 
-/* アバター切り替えボタン */
+/* avatar switcher */
+
 #avatar-switcher {
-  position: fixed;
-  top: 10px;
-  right: 12px;
-  z-index: 21;
   display: flex;
+  align-items: center;
   gap: 6px;
+  pointer-events: auto;
+}
+
+#avatar-label {
+  font-size: 11px;
+  opacity: 0.8;
 }
 
 .avatar-btn {
-  font-size: 11px;
-  padding: 4px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background: rgba(0, 0, 0, 0.55);
-  color: #ffffff;
-  letter-spacing: 0.05em;
+  border: 1px solid rgba(255,255,255,0.4);
+  background: rgba(0,0,0,0.6);
+  color: #f5f5f5;
+  padding: 4px 12px;
+  font-size: 12px;
+  min-width: 44px;
 }
 
 .avatar-btn.active {
   background: #ffffff;
-  color: #111111;
+  color: #000000;
 }
 
-/* ジョイスティック */
+/* ---------- ジョイスティック ---------- */
+
 #joy-container {
   position: fixed;
-  bottom: 32px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 20;
+  bottom: calc(env(safe-area-inset-bottom, 8px) + 16px);
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 9;
 }
 
 #joy-bg {
-  width: 90px;
-  height: 90px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  background: rgba(0, 0, 0, 0.65);
+  width: 120px;
+  height: 120px;
+  border-radius: 60px;
+  background: radial-gradient(circle at 30% 30%, #222 0, #000 60%);
+  opacity: 0.9;
   position: relative;
-  touch-action: none;
+  pointer-events: auto;
 }
 
 #joy-stick {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  background: #f4f4f4;
+  width: 56px;
+  height: 56px;
+  border-radius: 28px;
+  background: #f5f5f5;
   position: absolute;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.3),
-              0 10px 20px rgba(0, 0, 0, 0.6);
 }
 
-/* 情報パネル */
+/* ---------- 情報パネル ---------- */
+
 #info-panel {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.68);
+  background: rgba(0,0,0,0.78);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 30;
+  z-index: 20;
 }
 
 #info-panel.hidden {
@@ -112,61 +127,53 @@ html, body {
 }
 
 #info-inner {
-  position: relative;
-  max-width: min(90vw, 540px);
-  max-height: 80vh;
-  background: #101014;
+  width: min(92vw, 480px);
+  max-height: 88vh;
+  background: #111217;
   border-radius: 16px;
-  padding: 14px 14px 16px;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.8);
+  padding: 16px 16px 20px;
+  box-shadow: 0 18px 45px rgba(0,0,0,0.6);
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
 #info-close {
-  position: absolute;
-  right: 10px;
-  top: 8px;
+  align-self: flex-end;
   border: none;
   background: transparent;
-  color: #ffffff;
-  font-size: 18px;
+  color: #f5f5f5;
+  font-size: 22px;
+  line-height: 1;
+}
+
+#info-image-wrap {
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
 }
 
 #info-image {
+  display: block;
   width: 100%;
-  border-radius: 10px;
-  background: #000;
-  object-fit: contain;
+  height: auto;
+}
+
+#info-title {
+  font-weight: 600;
+  margin-top: 4px;
 }
 
 #info-text {
   font-size: 13px;
+  opacity: 0.86;
 }
 
-#info-title {
-  font-size: 15px;
-  margin: 4px 0 4px;
-}
+/* 小さな画面で UI が潰れないように */
 
-#info-desc {
-  font-size: 13px;
-  opacity: 0.8;
-  line-height: 1.5;
-}
-#avatar-switcher {
-  position: fixed;
-  top: 16px;
-  right: 16px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  z-index: 20;
-}
-
-#avatar-label {
-  font-size: 12px;
-  color: #ffffff;
-  opacity: 0.8;
+@media (max-width: 360px) {
+  #museum-title { font-size: 12px; }
+  #museum-sub { display: none; }
+  #avatar-label { display: none; }
 }
