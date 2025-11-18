@@ -1,7 +1,9 @@
 // app.js
-// Three.js グローバル読み込み前提
+// Three.js を <script> タグで読み込んでいる前提
 
-(function () {
+window.addEventListener("load", () => {
+  // ================== ここから中身 ==================
+
   // ========= DOM 取得 =========
   const canvas =
     document.getElementById("webgl") ||
@@ -9,7 +11,6 @@
 
   // 「人間」「犬」ボタンを柔軟に検出
   function findAvatarButton(label) {
-    // まず id / data 属性
     if (label === "human") {
       return (
         document.getElementById("avatar-human") ||
@@ -22,15 +23,23 @@
         document.querySelector('[data-avatar="dog"]')
       );
     }
-    // それでも無ければ、テキストで探索
-    const buttons = Array.from(document.querySelectorAll("button"));
+    // テキストで探索（button以外の要素も見る）
+    const candidates = Array.from(
+      document.querySelectorAll("button, .avatar-btn, [data-avatar]")
+    );
     if (label === "human") {
       return (
-        buttons.find((b) => b.textContent.trim().includes("人間")) || null
+        candidates.find((el) =>
+          el.textContent.trim().includes("人間")
+        ) || null
       );
     }
     if (label === "dog") {
-      return buttons.find((b) => b.textContent.trim().includes("犬")) || null;
+      return (
+        candidates.find((el) =>
+          el.textContent.trim().includes("犬")
+        ) || null
+      );
     }
     return null;
   }
@@ -288,7 +297,6 @@
       const remain = total - workIndex;
       const count = Math.min(worksPerWall, remain);
 
-      // 等間隔 spacing：最大 4m、壁幅に合わせて調整
       const maxSpacing = 4.0;
       const spacing = Math.min(maxSpacing, def.width / (count + 1));
       const start = -spacing * ((count - 1) / 2);
@@ -355,7 +363,15 @@
     head.position.y = 4.4;
     humanGroup.add(head);
 
-    const hairGeo = new THREE.SphereGeometry(1.1, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2);
+    const hairGeo = new THREE.SphereGeometry(
+      1.1,
+      32,
+      32,
+      0,
+      Math.PI * 2,
+      0,
+      Math.PI / 2
+    );
     const hair = new THREE.Mesh(hairGeo, matHair);
     hair.position.y = 4.7;
     humanGroup.add(hair);
@@ -369,7 +385,7 @@
     humanGroup.add(rightFoot);
   })();
 
-  // 犬（シンプル）
+  // 犬
   (function createDog() {
     const matBody = new THREE.MeshStandardMaterial({
       color: 0xc88f4f,
@@ -417,12 +433,11 @@
       dogGroup.add(leg);
     });
 
-    dogGroup.visible = false; // 初期は人間
+    dogGroup.visible = false;
   })();
 
   avatarGroup.position.set(0, 0, 10);
   cameraPivot.position.copy(avatarGroup.position);
-
   camera.position.set(0, 3.5, 7);
 
   let currentAvatar = "human";
@@ -543,7 +558,7 @@
     const nx = (clamped * Math.cos(ang)) / maxR;
     const ny = (clamped * Math.sin(ang)) / maxR;
 
-    // 上にドラッグで前進になるよう Y 反転
+    // 上にドラッグで前進
     joyVector.x = nx;
     joyVector.y = -ny;
 
@@ -589,7 +604,7 @@
     });
   }
 
-  // ========= 画像クリック（あれば） =========
+  // ========= 画像クリック =========
   const raycaster = new THREE.Raycaster();
   const pointerNDC = new THREE.Vector2();
 
@@ -647,7 +662,6 @@
     requestAnimationFrame(animate);
     const dt = clock.getDelta();
 
-    // ジョイスティック移動
     if (Math.abs(joyVector.x) > 0.02 || Math.abs(joyVector.y) > 0.02) {
       const speed = 6.0;
 
@@ -660,8 +674,8 @@
       right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
 
       const move = new THREE.Vector3();
-      move.addScaledVector(forward, joyVector.y * speed * dt); // 前後
-      move.addScaledVector(right, joyVector.x * speed * dt);   // 左右
+      move.addScaledVector(forward, joyVector.y * speed * dt);
+      move.addScaledVector(right, joyVector.x * speed * dt);
 
       avatarGroup.position.add(move);
       updateCameraFromAngles();
@@ -672,4 +686,6 @@
 
   updateCameraFromAngles();
   animate();
-})();
+
+  // ================== ここまで ==================
+});
