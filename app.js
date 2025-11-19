@@ -1,24 +1,28 @@
+// app.js
 // TAF DOG MUSEUM 3D ギャラリー
 
 (() => {
   'use strict';
 
   // ====== 基本セットアップ ======
-  // data.js が読めなくても最低 5 枚は表示するためのデフォルト
-  const DEFAULT_WORKS = [
-    { id: 1,  title: 'TAF DOG #01', image: 'taf_dog_01.png' },
-    { id: 2,  title: 'TAF DOG #02', image: 'taf_dog_02.png' },
-    { id: 3,  title: 'TAF DOG #03', image: 'taf_dog_03.png' },
-    { id: 4,  title: 'TAF DOG #04', image: 'taf_dog_04.png' },
-    { id: 5,  title: 'TAF DOG #05', image: 'taf_dog_05.png' }
-  ];
-
+  // data.js が正しく読めていれば window.WORKS、ダメなら空配列
   const WORKS =
-    (window.WORKS && Array.isArray(window.WORKS) && window.WORKS.length)
-      ? window.WORKS
-      : DEFAULT_WORKS;
-
+    (window.WORKS && Array.isArray(window.WORKS)) ? window.WORKS : [];
   const canvas = document.getElementById('scene');
+
+  // デバッグ用：WORKS の長さを画面左上に表示
+  const dbg = document.createElement('div');
+  dbg.id = 'debug-info';
+  dbg.textContent = 'WORKS length: ' + WORKS.length;
+  dbg.style.position = 'fixed';
+  dbg.style.left = '8px';
+  dbg.style.top = '8px';
+  dbg.style.padding = '4px 8px';
+  dbg.style.fontSize = '10px';
+  dbg.style.background = 'rgba(0,0,0,0.6)';
+  dbg.style.color = '#fff';
+  dbg.style.zIndex = '9999';
+  document.body.appendChild(dbg);
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x111116);
@@ -389,4 +393,188 @@
     if (!isDraggingView || !avatarGroup) return;
     const x = e.clientX || (e.touches && e.touches[0].clientX) || 0;
     const dx = x - lastPointerX;
-    lastPointerX
+    lastPointerX = x;
+    const rotateSpeed = 0.004;
+    avatarGroup.rotation.y -= dx * rotateSpeed;
+  }
+
+  function onPointerUpView() {
+    isDraggingView = false;
+  }
+
+  canvas.addEventListener('mousedown', onPointerDownView);
+  canvas.addEventListener('mousemove', onPointerMoveView);
+  canvas.addEventListener('mouseup', onPointerUpView);
+  canvas.addEventListener('mouseleave', onPointerUpView);
+
+  canvas.addEventListener('touchstart', onPointerDownView, { passive: false });
+  canvas.addEventListener('touchmove', onPointerMoveView, { passive: false });
+  canvas.addEventListener('touchend', onPointerUpView);
+  canvas.addEventListener('touchcancel', onPointerUpView);
+
+  // ====== ジョイスティック ======
+  const joyBg = document.getElementById('joy-bg');
+  const joyStick = document.getElementById('joy-stick');
+
+  let joyActive = false;
+  let joyVector = { x: 0, y: 0 }; // -1〜1
+
+  function setJoyStickPosition(dx, dy) {
+    if (!joyBg || !joyStick) return;
+    const r = joyBg.clientWidth / 2;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    const max = r;
+    const scale = len > max ? max / len : 1;
+    const px = dx * scale;
+    const py = dy * scale;
+    joyStick.style.transform = `translate(${px}px, ${py}px)`;
+  }
+
+  function handleJoyPointerDown(e) {
+    if (!joyBg || !joyStick) return;
+    joyActive = true;
+
+    const rect = joyBg.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
+
+    const dx = clientX - cx;
+    const dy = clientY - cy;
+
+    const r = rect.width / 2;
+    joyVector.x = dx / r;
+    joyVector.y = dy / r;
+
+    setJoyStickPosition(dx, dy);
+    e.preventDefault();
+  }
+
+  function handleJoyPointerMove(e) {
+    if (!joyActive || !joyBg || !joyStick) return;
+
+    const rect = joyBg.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
+
+    const dx = clientX - cx;
+    const dy = clientY - cy;
+
+    const r = rect.width / 2;
+    joyVector.x = dx / r;
+    joyVector.y = dy / r;
+
+    setJoyStickPosition(dx, dy);
+    e.preventDefault();
+  }
+
+  function handleJoyPointerUp() {
+    joyActive = false;
+    joyVector.x = 0;
+    joyVector.y = 0;
+    setJoyStickPosition(0, 0);
+  }
+
+  if (joyBg) {
+    joyBg.addEventListener('mousedown', handleJoyPointerDown);
+    window.addEventListener('mousemove', handleJoyPointerMove);
+    window.addEventListener('mouseup', handleJoyPointerUp);
+
+    joyBg.addEventListener('touchstart', handleJoyPointerDown, { passive: false });
+    window.addEventListener('touchmove', handleJoyPointerMove, { passive: false });
+    window.addEventListener('touchend', handleJoyPointerUp);
+    window.addEventListener('touchcancel', handleJoyPointerUp);
+  }
+
+  // ====== 移動処理 ======
+  function updateMovement(delta) {
+    if (!avatarGroup) return;
+
+    const speed = 4.0;
+
+    // 前後：上ドラッグで前進（-y が前）
+    const forward = -joyVector.y;
+    // 左右：右ドラッグで右に動く
+    const strafe = joyVector.x;
+
+    if (Math.abs(forward) < 0.01 && Math.abs(strafe) < 0.01) return;
+
+    const yaw = avatarGroup.rotation.y;
+    const cos = Math.cos(yaw);
+    const sin = Math.sin(yaw);
+
+    // ローカル(右=+x, 前=+z) → ワールド
+    const worldX = strafe * cos - forward * sin;
+    const worldZ = strafe * sin + forward * cos;
+
+    avatarGroup.position.x += worldX * speed * delta;
+    avatarGroup.position.z += worldZ * speed * delta;
+
+    // ルーム外に出ないよう制限
+    const margin = 1.5;
+    const limitX = ROOM_WIDTH / 2 - margin;
+    const limitZ = ROOM_DEPTH / 2 - margin;
+    avatarGroup.position.x = Math.max(
+      -limitX,
+      Math.min(limitX, avatarGroup.position.x)
+    );
+    avatarGroup.position.z = Math.max(
+      -limitZ,
+      Math.min(limitZ, avatarGroup.position.z)
+    );
+  }
+
+  // ====== カメラ追従 ======
+  function updateCamera() {
+    if (!avatarGroup) return;
+
+    const offset = getCameraOffset();
+    const yaw = avatarGroup.rotation.y;
+
+    const cos = Math.cos(yaw);
+    const sin = Math.sin(yaw);
+
+    const ox = offset.x * cos - offset.z * sin;
+    const oz = offset.x * sin + offset.z * cos;
+
+    camera.position.set(
+      avatarGroup.position.x - ox,
+      avatarGroup.position.y + offset.y,
+      avatarGroup.position.z - oz
+    );
+
+    const lookTarget = new THREE.Vector3(
+      avatarGroup.position.x,
+      avatarGroup.position.y + (avatarType === 'dog' ? 0.8 : 1.6),
+      avatarGroup.position.z
+    );
+    camera.lookAt(lookTarget);
+  }
+
+  // ====== リサイズ ======
+  window.addEventListener('resize', () => {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+  });
+
+  // ====== メインループ ======
+  function animate() {
+    const delta = clock.getDelta();
+
+    updateMovement(delta);
+    updateCamera();
+
+    renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+  }
+
+  animate();
+})();
