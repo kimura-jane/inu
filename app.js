@@ -1,5 +1,5 @@
 // app.js
-// TAF DOG MUSEUM 3D ギャラリー（シンプル版＋デバッグ）
+// TAF DOG MUSEUM 3D ギャラリー（フレーム付き＆視点調整版）
 
 (() => {
   'use strict';
@@ -34,7 +34,7 @@
     0.1,
     1000
   );
-  camera.position.set(0, 2, 8);
+  camera.position.set(0, 4, 10);
 
   const renderer = new THREE.WebGLRenderer({
     canvas,
@@ -112,7 +112,7 @@
   createRoom();
 
   // ======================
-  // アート（平面に画像）
+  // アート（額装＋スポットライト）
   // ======================
   const textureLoader = new THREE.TextureLoader();
   let loadOk = 0;
@@ -124,19 +124,48 @@
   }
   updateDebug();
 
-  function createArtworkPlane(texture, position, rotationY) {
-    const w = 2.0;
-    const h = 2.6;
+  function createFrame(texture, position, rotationY) {
+    const frameWidth = 2.0;
+    const frameHeight = 2.6;
+    const frameDepth = 0.12;
 
-    const geo = new THREE.PlaneGeometry(w, h);
-    const mat = texture
-      ? new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide })
-      : new THREE.MeshBasicMaterial({ color: 0x444444, side: THREE.DoubleSide });
+    // テクスチャ設定
+    if (texture) {
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    }
 
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.copy(position);
-    mesh.rotation.y = rotationY;
-    scene.add(mesh);
+    const materials = [
+      new THREE.MeshPhongMaterial({ color: 0x111111 }), // right
+      new THREE.MeshPhongMaterial({ color: 0x111111 }), // left
+      new THREE.MeshPhongMaterial({ color: 0x111111 }), // top
+      new THREE.MeshPhongMaterial({ color: 0x111111 }), // bottom
+      texture
+        ? new THREE.MeshPhongMaterial({ map: texture })
+        : new THREE.MeshPhongMaterial({ color: 0x333333 }),
+      new THREE.MeshPhongMaterial({ color: 0x111111 })  // back
+    ];
+
+    const geo = new THREE.BoxGeometry(frameWidth, frameHeight, frameDepth);
+    const frame = new THREE.Mesh(geo, materials);
+    frame.position.copy(position);
+    frame.rotation.y = rotationY;
+    frame.castShadow = true;
+    frame.receiveShadow = true;
+    scene.add(frame);
+
+    // スポットライト（上から当てる）
+    const spot = new THREE.SpotLight(0xffffff, 0.8, 10, Math.PI / 5, 0.4, 1);
+    spot.position.set(
+      position.x,
+      position.y + 1.3,
+      position.z + (Math.cos(rotationY) * 0.8) - (Math.sin(rotationY) * 0.8)
+    );
+    spot.target = frame;
+    spot.castShadow = true;
+    scene.add(spot);
+    scene.add(spot.target);
   }
 
   function layoutArtworks() {
@@ -169,25 +198,25 @@
       let rotY = 0;
 
       switch (wallIndex) {
-        case 0: {
+        case 0: { // 前
           const startX = -frontLen / 2;
           pos.set(startX + frontStep * indexOnWall, h, frontZ);
           rotY = 0;
           break;
         }
-        case 1: {
+        case 1: { // 右
           const startZ = -sideLen / 2;
           pos.set(rightX, h, startZ + sideStep * indexOnWall);
           rotY = -Math.PI / 2;
           break;
         }
-        case 2: {
+        case 2: { // 後ろ
           const startX = frontLen / 2;
           pos.set(startX - frontStep * indexOnWall, h, backZ);
           rotY = Math.PI;
           break;
         }
-        default: {
+        default: { // 左
           const startZ = sideLen / 2;
           pos.set(leftX, h, startZ - sideStep * indexOnWall);
           rotY = Math.PI / 2;
@@ -200,13 +229,13 @@
         (tex) => {
           loadOk++;
           updateDebug();
-          createArtworkPlane(tex, pos, rotY);
+          createFrame(tex, pos, rotY);
         },
         undefined,
         () => {
           loadNg++;
           updateDebug();
-          createArtworkPlane(null, pos, rotY);
+          createFrame(null, pos, rotY); // 失敗時は黒フレームだけ
         }
       );
     });
@@ -325,11 +354,12 @@
     return group;
   }
 
+  // 視点オフセット（目線を高め・遠めに）
   function getCameraOffset() {
     if (avatarType === 'dog') {
-      return new THREE.Vector3(0, 1.4, 4.0);
+      return new THREE.Vector3(0, 2.2, 5.5);
     }
-    return new THREE.Vector3(0, 2.0, 4.5);
+    return new THREE.Vector3(0, 3.0, 6.0);
   }
 
   function setAvatar(type) {
@@ -482,7 +512,7 @@
 
     const speed = 4.0;
     const forward = -joyVector.y;
-    const strafe = joyVector.x;
+    const strafe = -joyVector.x; // ← 左右を反転
 
     if (Math.abs(forward) < 0.01 && Math.abs(strafe) < 0.01) return;
 
