@@ -1,28 +1,42 @@
 // app.js
-// TAF DOG MUSEUM 3D ギャラリー（シンプル版）
+// TAF DOG MUSEUM 3D ギャラリー（修正版）
 
 (() => {
   'use strict';
 
-  // ====== 基本セットアップ ======
-  const WORKS =
-    (window.WORKS && Array.isArray(window.WORKS)) ? window.WORKS : [];
+  // ====== WORKSデータの確認 ======
+  const WORKS = window.WORKS || [];
+  console.log('WORKS loaded:', WORKS.length);
+
   const canvas = document.getElementById('scene');
+  if (!canvas) {
+    console.error('canvas not found!');
+    return;
+  }
+
+  // Three.jsの確認
+  if (typeof THREE === 'undefined') {
+    console.error('THREE.js not loaded!');
+    return;
+  }
 
   // デバッグ表示
   const dbg = document.createElement('div');
   dbg.id = 'debug-info';
   dbg.textContent = 'WORKS: ' + WORKS.length;
-  dbg.style.position = 'fixed';
-  dbg.style.left = '8px';
-  dbg.style.top = '8px';
-  dbg.style.padding = '4px 8px';
-  dbg.style.fontSize = '10px';
-  dbg.style.background = 'rgba(0,0,0,0.6)';
-  dbg.style.color = '#fff';
-  dbg.style.zIndex = '9999';
+  dbg.style.cssText = `
+    position: fixed;
+    left: 8px;
+    top: 40px;
+    padding: 4px 8px;
+    fontSize: 10px;
+    background: rgba(0,0,0,0.8);
+    color: #fff;
+    zIndex: 9999;
+  `;
   document.body.appendChild(dbg);
 
+  // ====== Three.js セットアップ ======
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x111116);
 
@@ -60,7 +74,7 @@
   mainLight.shadow.mapSize.set(2048, 2048);
   scene.add(mainLight);
 
-  // ====== 床・壁 ======
+  // ====== 床・壁・天井 ======
   function createRoom() {
     // 床
     const floorGeo = new THREE.PlaneGeometry(ROOM_WIDTH, ROOM_DEPTH);
@@ -83,23 +97,27 @@
     const wallGeoW = new THREE.PlaneGeometry(ROOM_WIDTH, ROOM_HEIGHT);
     const wallGeoD = new THREE.PlaneGeometry(ROOM_DEPTH, ROOM_HEIGHT);
 
+    // 前壁
     const wallFront = new THREE.Mesh(wallGeoW, wallMat);
     wallFront.position.set(0, ROOM_HEIGHT / 2, -ROOM_DEPTH / 2);
     wallFront.receiveShadow = true;
     scene.add(wallFront);
 
+    // 後壁
     const wallBack = new THREE.Mesh(wallGeoW, wallMat);
     wallBack.position.set(0, ROOM_HEIGHT / 2, ROOM_DEPTH / 2);
     wallBack.rotation.y = Math.PI;
     wallBack.receiveShadow = true;
     scene.add(wallBack);
 
+    // 左壁
     const wallLeft = new THREE.Mesh(wallGeoD, wallMat);
     wallLeft.position.set(-ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0);
     wallLeft.rotation.y = Math.PI / 2;
     wallLeft.receiveShadow = true;
     scene.add(wallLeft);
 
+    // 右壁
     const wallRight = new THREE.Mesh(wallGeoD, wallMat);
     wallRight.position.set(ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0);
     wallRight.rotation.y = -Math.PI / 2;
@@ -109,14 +127,13 @@
 
   createRoom();
 
-  // ====== アート（超シンプル：テクスチャ付き平面） ======
+  // ====== アート配置 ======
   const textureLoader = new THREE.TextureLoader();
   let loadOk = 0;
   let loadNg = 0;
 
   function updateDebug() {
-    dbg.textContent =
-      `WORKS: ${WORKS.length}  loaded: ${loadOk}  error: ${loadNg}`;
+    dbg.textContent = `WORKS: ${WORKS.length} | loaded: ${loadOk} | error: ${loadNg}`;
   }
 
   function createArtworkPlane(texture, position, rotationY) {
@@ -126,7 +143,7 @@
     const geo = new THREE.PlaneGeometry(w, h);
     const mat = texture
       ? new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide })
-      : new THREE.MeshBasicMaterial({ color: 0x444444, side: THREE.DoubleSide });
+      : new THREE.MeshBasicMaterial({ color: 0xff0000, side: THREE.DoubleSide }); // 赤くしてエラー確認
 
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.copy(position);
@@ -135,7 +152,10 @@
   }
 
   function layoutArtworks() {
-    if (!WORKS.length) return;
+    if (!WORKS.length) {
+      console.warn('No WORKS data!');
+      return;
+    }
 
     const total = WORKS.length;
     const perWall = Math.ceil(total / 4);
@@ -152,9 +172,14 @@
     const sideStep = perWall > 1 ? sideLen / (perWall - 1) : 0;
 
     WORKS.forEach((work, i) => {
-      const imgPath =
-        work.img || work.image || work.src || work.url || work.path;
-      if (!imgPath) return;
+      const imgPath = work.img || work.image || work.src || work.url || work.path;
+      
+      console.log(`Work ${i}:`, imgPath);
+
+      if (!imgPath) {
+        console.warn(`No image path for work ${i}`);
+        return;
+      }
 
       const wallIndex = Math.floor(i / perWall);
       const indexOnWall = i % perWall;
@@ -195,13 +220,15 @@
         (tex) => {
           loadOk++;
           updateDebug();
+          console.log('Loaded:', imgPath);
           createArtworkPlane(tex, pos, rotY);
         },
         undefined,
-        () => {
+        (err) => {
           loadNg++;
           updateDebug();
-          createArtworkPlane(null, pos, rotY); // 失敗時はグレー板だけ
+          console.error('Failed to load:', imgPath, err);
+          createArtworkPlane(null, pos, rotY);
         }
       );
     });
@@ -209,7 +236,7 @@
 
   layoutArtworks();
 
-  // ====== アバター ======
+  // ====== アバター（修正: avatarGroupは1回だけ宣言） ======
   let avatarGroup = null;
   let avatarType = 'human';
 
@@ -353,8 +380,6 @@
   setAvatar('human');
 
   // ====== 視線ドラッグ ======
-  let avatarGroup = null; // setAvatar で上書きされる前提
-
   let isDraggingView = false;
   let lastPointerX = 0;
 
@@ -540,4 +565,6 @@
   }
 
   animate();
+
+  console.log('App initialized!');
 })();
