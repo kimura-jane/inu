@@ -1,5 +1,5 @@
 // app.js
-// TAF DOG MUSEUM 3D ギャラリー（フレーム付き＆視点調整版）
+// TAF DOG MUSEUM 3D ギャラリー（安定版＋額装＋視点調整）
 
 (() => {
   'use strict';
@@ -34,7 +34,7 @@
     0.1,
     1000
   );
-  camera.position.set(0, 4, 10);
+  camera.position.set(0, 3, 10);
 
   const renderer = new THREE.WebGLRenderer({
     canvas,
@@ -112,7 +112,7 @@
   createRoom();
 
   // ======================
-  // アート（額装＋スポットライト）
+  // アート（額装＋軽めスポットライト）
   // ======================
   const textureLoader = new THREE.TextureLoader();
   let loadOk = 0;
@@ -124,10 +124,10 @@
   }
   updateDebug();
 
-  function createFrame(texture, position, rotationY) {
-    const frameWidth = 2.0;
-    const frameHeight = 2.6;
-    const frameDepth = 0.12;
+  function createArtworkFrame(texture, position, rotationY) {
+    const artW = 2.0;
+    const artH = 2.6;
+    const frameMargin = 0.25;
 
     // テクスチャ設定
     if (texture) {
@@ -136,34 +136,39 @@
       texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
     }
 
-    const materials = [
-      new THREE.MeshPhongMaterial({ color: 0x111111 }), // right
-      new THREE.MeshPhongMaterial({ color: 0x111111 }), // left
-      new THREE.MeshPhongMaterial({ color: 0x111111 }), // top
-      new THREE.MeshPhongMaterial({ color: 0x111111 }), // bottom
-      texture
-        ? new THREE.MeshPhongMaterial({ map: texture })
-        : new THREE.MeshPhongMaterial({ color: 0x333333 }),
-      new THREE.MeshPhongMaterial({ color: 0x111111 })  // back
-    ];
+    const group = new THREE.Group();
+    group.position.copy(position);
+    group.rotation.y = rotationY;
 
-    const geo = new THREE.BoxGeometry(frameWidth, frameHeight, frameDepth);
-    const frame = new THREE.Mesh(geo, materials);
-    frame.position.copy(position);
-    frame.rotation.y = rotationY;
-    frame.castShadow = true;
-    frame.receiveShadow = true;
-    scene.add(frame);
-
-    // スポットライト（上から当てる）
-    const spot = new THREE.SpotLight(0xffffff, 0.8, 10, Math.PI / 5, 0.4, 1);
-    spot.position.set(
-      position.x,
-      position.y + 1.3,
-      position.z + (Math.cos(rotationY) * 0.8) - (Math.sin(rotationY) * 0.8)
+    // フレーム（少し大きい板）
+    const frameGeo = new THREE.PlaneGeometry(
+      artW + frameMargin,
+      artH + frameMargin
     );
-    spot.target = frame;
+    const frameMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
+    const frameMesh = new THREE.Mesh(frameGeo, frameMat);
+    frameMesh.castShadow = true;
+    frameMesh.receiveShadow = true;
+    frameMesh.position.set(0, 0, 0);
+    group.add(frameMesh);
+
+    // アート本体
+    const artGeo = new THREE.PlaneGeometry(artW, artH);
+    const artMat = texture
+      ? new THREE.MeshBasicMaterial({ map: texture })
+      : new THREE.MeshBasicMaterial({ color: 0x444444 });
+    const artMesh = new THREE.Mesh(artGeo, artMat);
+    artMesh.position.set(0, 0, 0.01); // フレームより少し前
+    group.add(artMesh);
+
+    scene.add(group);
+
+    // スポットライト（上から）
+    const worldPos = position.clone();
+    const spot = new THREE.SpotLight(0xffffff, 0.7, 10, Math.PI / 5, 0.4, 1);
+    spot.position.set(worldPos.x, worldPos.y + 1.5, worldPos.z + 0.5);
     spot.castShadow = true;
+    spot.target = group;
     scene.add(spot);
     scene.add(spot.target);
   }
@@ -229,13 +234,13 @@
         (tex) => {
           loadOk++;
           updateDebug();
-          createFrame(tex, pos, rotY);
+          createArtworkFrame(tex, pos, rotY);
         },
         undefined,
         () => {
           loadNg++;
           updateDebug();
-          createFrame(null, pos, rotY); // 失敗時は黒フレームだけ
+          createArtworkFrame(null, pos, rotY);
         }
       );
     });
@@ -354,12 +359,12 @@
     return group;
   }
 
-  // 視点オフセット（目線を高め・遠めに）
+  // 視点オフセット（高め＆遠め）
   function getCameraOffset() {
     if (avatarType === 'dog') {
-      return new THREE.Vector3(0, 2.2, 5.5);
+      return new THREE.Vector3(0, 2.4, 5.2);
     }
-    return new THREE.Vector3(0, 3.0, 6.0);
+    return new THREE.Vector3(0, 3.2, 6.0);
   }
 
   function setAvatar(type) {
@@ -430,7 +435,7 @@
   const joyStick = document.getElementById('joy-stick');
 
   let joyActive = false;
-  let joyVector = { x: 0, y: 0 };
+  let joyVector = { x: 0, y: 0 }; // -1〜1
 
   function setJoyStickPosition(dx, dy) {
     if (!joyBg || !joyStick) return;
