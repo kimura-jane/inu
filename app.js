@@ -5,7 +5,22 @@
   'use strict';
 
   // ====== 基本セットアップ ======
-  const WORKS = window.WORKS || [];
+  // data.js が読めなかった場合でも最低限 5 枚は表示するためのデフォルト
+  const DEFAULT_WORKS = [
+    { id: 1, title: 'TAF DOG #01', image: 'taf_dog_01.png' },
+    { id: 2, title: 'TAF DOG #02', image: 'taf_dog_02.png' },
+    { id: 3, title: 'TAF DOG #03', image: 'taf_dog_03.png' },
+    { id: 4, title: 'TAF DOG #04', image: 'taf_dog_04.png' },
+    { id: 5, title: 'TAF DOG #05', image: 'taf_dog_05.png' }
+  ];
+
+  const WORKS =
+    (window.WORKS && Array.isArray(window.WORKS) && window.WORKS.length)
+      ? window.WORKS
+      : DEFAULT_WORKS;
+
+  console.log('TAF DOG MUSEUM works:', WORKS.length);
+
   const canvas = document.getElementById('scene');
 
   const scene = new THREE.Scene();
@@ -162,7 +177,6 @@
     const sideStep = perWall > 1 ? sideLen / (perWall - 1) : 0;
 
     WORKS.forEach((work, i) => {
-      // データ側のプロパティ名の違いに対応
       const imgPath =
         work.img || work.image || work.src || work.url || work.path;
       if (!imgPath) return;
