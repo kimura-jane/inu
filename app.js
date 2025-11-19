@@ -1,19 +1,18 @@
 // app.js
-// TAF DOG MUSEUM 3D ギャラリー
+// TAF DOG MUSEUM 3D ギャラリー（シンプル版）
 
 (() => {
   'use strict';
 
   // ====== 基本セットアップ ======
-  // data.js が正しく読めていれば window.WORKS、ダメなら空配列
   const WORKS =
     (window.WORKS && Array.isArray(window.WORKS)) ? window.WORKS : [];
   const canvas = document.getElementById('scene');
 
-  // デバッグ用：WORKS の長さを画面左上に表示
+  // デバッグ表示
   const dbg = document.createElement('div');
   dbg.id = 'debug-info';
-  dbg.textContent = 'WORKS length: ' + WORKS.length;
+  dbg.textContent = 'WORKS: ' + WORKS.length;
   dbg.style.position = 'fixed';
   dbg.style.left = '8px';
   dbg.style.top = '8px';
@@ -84,27 +83,23 @@
     const wallGeoW = new THREE.PlaneGeometry(ROOM_WIDTH, ROOM_HEIGHT);
     const wallGeoD = new THREE.PlaneGeometry(ROOM_DEPTH, ROOM_HEIGHT);
 
-    // 前（z マイナス側）
     const wallFront = new THREE.Mesh(wallGeoW, wallMat);
     wallFront.position.set(0, ROOM_HEIGHT / 2, -ROOM_DEPTH / 2);
     wallFront.receiveShadow = true;
     scene.add(wallFront);
 
-    // 後ろ（z プラス側）
     const wallBack = new THREE.Mesh(wallGeoW, wallMat);
     wallBack.position.set(0, ROOM_HEIGHT / 2, ROOM_DEPTH / 2);
     wallBack.rotation.y = Math.PI;
     wallBack.receiveShadow = true;
     scene.add(wallBack);
 
-    // 左（x マイナス側）
     const wallLeft = new THREE.Mesh(wallGeoD, wallMat);
     wallLeft.position.set(-ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0);
     wallLeft.rotation.y = Math.PI / 2;
     wallLeft.receiveShadow = true;
     scene.add(wallLeft);
 
-    // 右（x プラス側）
     const wallRight = new THREE.Mesh(wallGeoD, wallMat);
     wallRight.position.set(ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0);
     wallRight.rotation.y = -Math.PI / 2;
@@ -114,50 +109,29 @@
 
   createRoom();
 
-  // ====== アートフレーム ======
+  // ====== アート（超シンプル：テクスチャ付き平面） ======
   const textureLoader = new THREE.TextureLoader();
+  let loadOk = 0;
+  let loadNg = 0;
 
-  function createFrame(texture, position, rotationY) {
-    const frameWidth = 2.0;
-    const frameHeight = 2.6;
-    const frameDepth = 0.1;
+  function updateDebug() {
+    dbg.textContent =
+      `WORKS: ${WORKS.length}  loaded: ${loadOk}  error: ${loadNg}`;
+  }
 
-    texture.minFilter = THREE.LinearFilter;
-    texture.magFilter = THREE.LinearFilter;
-    texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  function createArtworkPlane(texture, position, rotationY) {
+    const w = 2.0;
+    const h = 2.6;
 
-    const materials = [
-      new THREE.MeshPhongMaterial({ color: 0x111111 }), // right
-      new THREE.MeshPhongMaterial({ color: 0x111111 }), // left
-      new THREE.MeshPhongMaterial({ color: 0x111111 }), // top
-      new THREE.MeshPhongMaterial({ color: 0x111111 }), // bottom
-      new THREE.MeshPhongMaterial({ map: texture }),    // front
-      new THREE.MeshPhongMaterial({ color: 0x111111 })  // back
-    ];
+    const geo = new THREE.PlaneGeometry(w, h);
+    const mat = texture
+      ? new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide })
+      : new THREE.MeshBasicMaterial({ color: 0x444444, side: THREE.DoubleSide });
 
-    const frameGeo = new THREE.BoxGeometry(
-      frameWidth,
-      frameHeight,
-      frameDepth
-    );
-    const frame = new THREE.Mesh(frameGeo, materials);
-    frame.position.copy(position);
-    frame.rotation.y = rotationY;
-    frame.castShadow = true;
-    frame.receiveShadow = true;
-    scene.add(frame);
-
-    // スポットライト
-    const spot = new THREE.SpotLight(0xffffff, 0.65, 10, Math.PI / 6, 0.4, 1);
-    spot.position.set(
-      position.x,
-      position.y + 1.2,
-      position.z + (Math.cos(rotationY) * 0.7) - (Math.sin(rotationY) * 0.7)
-    );
-    spot.target = frame;
-    spot.castShadow = true;
-    scene.add(spot);
-    scene.add(spot.target);
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.copy(position);
+    mesh.rotation.y = rotationY;
+    scene.add(mesh);
   }
 
   function layoutArtworks() {
@@ -171,7 +145,7 @@
     const leftX = -ROOM_WIDTH / 2 + 0.05;
     const rightX = ROOM_WIDTH / 2 - 0.05;
 
-    const frontLen = ROOM_WIDTH - 4; // 左右マージン
+    const frontLen = ROOM_WIDTH - 4;
     const sideLen = ROOM_DEPTH - 4;
 
     const frontStep = perWall > 1 ? frontLen / (perWall - 1) : 0;
@@ -182,7 +156,7 @@
         work.img || work.image || work.src || work.url || work.path;
       if (!imgPath) return;
 
-      const wallIndex = Math.floor(i / perWall); // 0〜3
+      const wallIndex = Math.floor(i / perWall);
       const indexOnWall = i % perWall;
 
       const h = 2.0;
@@ -190,28 +164,24 @@
       let rotY = 0;
 
       switch (wallIndex) {
-        // 前の壁（z マイナス）: 正面を +z 向き
         case 0: {
           const startX = -frontLen / 2;
           pos.set(startX + frontStep * indexOnWall, h, frontZ);
           rotY = 0;
           break;
         }
-        // 右の壁（x プラス）: 正面を -x 向き
         case 1: {
           const startZ = -sideLen / 2;
           pos.set(rightX, h, startZ + sideStep * indexOnWall);
           rotY = -Math.PI / 2;
           break;
         }
-        // 後ろの壁（z プラス）: 正面を -z 向き
         case 2: {
           const startX = frontLen / 2;
           pos.set(startX - frontStep * indexOnWall, h, backZ);
           rotY = Math.PI;
           break;
         }
-        // 左の壁（x マイナス）: 正面を +x 向き
         default: {
           const startZ = sideLen / 2;
           pos.set(leftX, h, startZ - sideStep * indexOnWall);
@@ -222,12 +192,16 @@
 
       textureLoader.load(
         imgPath,
-        (tex) => createFrame(tex, pos, rotY),
+        (tex) => {
+          loadOk++;
+          updateDebug();
+          createArtworkPlane(tex, pos, rotY);
+        },
         undefined,
         () => {
-          // 読み込み失敗時も黒いフレームだけ出す
-          const dummy = new THREE.Texture();
-          createFrame(dummy, pos, rotY);
+          loadNg++;
+          updateDebug();
+          createArtworkPlane(null, pos, rotY); // 失敗時はグレー板だけ
         }
       );
     });
@@ -237,7 +211,7 @@
 
   // ====== アバター ======
   let avatarGroup = null;
-  let avatarType = 'human'; // 'human' or 'dog'
+  let avatarType = 'human';
 
   function clearAvatar() {
     if (!avatarGroup) return;
@@ -289,7 +263,7 @@
     group.add(rightFoot);
 
     group.position.set(0, 0, 4);
-    group.rotation.y = Math.PI; // 絵の方を見る
+    group.rotation.y = Math.PI;
 
     return group;
   }
@@ -359,7 +333,6 @@
     updateAvatarButtons();
   }
 
-  // ====== アバター切り替えUI ======
   const btnHuman = document.getElementById('btn-human');
   const btnDog = document.getElementById('btn-dog');
 
@@ -377,10 +350,11 @@
   if (btnHuman) btnHuman.addEventListener('click', () => setAvatar('human'));
   if (btnDog) btnDog.addEventListener('click', () => setAvatar('dog'));
 
-  // 初期アバター
   setAvatar('human');
 
   // ====== 視線ドラッグ ======
+  let avatarGroup = null; // setAvatar で上書きされる前提
+
   let isDraggingView = false;
   let lastPointerX = 0;
 
@@ -417,7 +391,7 @@
   const joyStick = document.getElementById('joy-stick');
 
   let joyActive = false;
-  let joyVector = { x: 0, y: 0 }; // -1〜1
+  let joyVector = { x: 0, y: 0 };
 
   function setJoyStickPosition(dx, dy) {
     if (!joyBg || !joyStick) return;
@@ -496,10 +470,7 @@
     if (!avatarGroup) return;
 
     const speed = 4.0;
-
-    // 前後：上ドラッグで前進（-y が前）
     const forward = -joyVector.y;
-    // 左右：右ドラッグで右に動く
     const strafe = joyVector.x;
 
     if (Math.abs(forward) < 0.01 && Math.abs(strafe) < 0.01) return;
@@ -508,25 +479,17 @@
     const cos = Math.cos(yaw);
     const sin = Math.sin(yaw);
 
-    // ローカル(右=+x, 前=+z) → ワールド
     const worldX = strafe * cos - forward * sin;
     const worldZ = strafe * sin + forward * cos;
 
     avatarGroup.position.x += worldX * speed * delta;
     avatarGroup.position.z += worldZ * speed * delta;
 
-    // ルーム外に出ないよう制限
     const margin = 1.5;
     const limitX = ROOM_WIDTH / 2 - margin;
     const limitZ = ROOM_DEPTH / 2 - margin;
-    avatarGroup.position.x = Math.max(
-      -limitX,
-      Math.min(limitX, avatarGroup.position.x)
-    );
-    avatarGroup.position.z = Math.max(
-      -limitZ,
-      Math.min(limitZ, avatarGroup.position.z)
-    );
+    avatarGroup.position.x = Math.max(-limitX, Math.min(limitX, avatarGroup.position.x));
+    avatarGroup.position.z = Math.max(-limitZ, Math.min(limitZ, avatarGroup.position.z));
   }
 
   // ====== カメラ追従 ======
